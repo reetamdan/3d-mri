@@ -1,0 +1,22 @@
+dataset:
+  name: Slicer real MRI smoke-test samples
+  version: slicer-sha256-samples-v1
+  raw_dir: ../data/raw
+  processed_dir: ../data/processed
+  metadata_dir: ../data/metadata
+  manifest: null
+preprocessing:
+  target_spacing: [2.0, 2.0, 2.0]
+  crop_size: null
+  target_shape: [128, 128, 128]
+  padding_mode: constant
+  normalization: minmax
+  normalization_range: [-1, 1]
+  max_voxels: 67108864
+split:
+  train: 0.70
+  validation: 0.15
+  test: 0.15
+seed: 42
+export_format: npy
+logs_dir: ../logs

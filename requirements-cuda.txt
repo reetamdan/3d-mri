@@ -1,0 +1,4 @@
+# Install after requirements.txt. CUDA 12.8 supports the local Blackwell GPU.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.11.0+cu128
+setuptools==78.1.0

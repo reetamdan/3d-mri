@@ -1,0 +1,21 @@
+shape: [128, 128, 32]
+device: cuda
+threads: 4
+seed: 43
+epochs: 300
+batch_size: 4
+steps_per_epoch: 48
+learning_rate: 0.0002
+smoke_test: false
+select_best: true
+vq:
+  base: 16
+  latent_channels: 8
+  codes: 128
+  commitment: 0.25
+gan_weight: 0
+unet_base: 32
+attention: true
+attention_heads: 4
+diffusion_steps: 200
+conditional: true

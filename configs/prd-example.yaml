@@ -1,0 +1,23 @@
+dataset:
+  name: MRI
+  version: local-v1
+  raw_dir: ../data/raw
+  processed_dir: ../data/processed
+  metadata_dir: ../data/metadata
+  # First directory below raw_dir identifies a subject. Flat files require a manifest.
+  manifest: null
+preprocessing:
+  target_spacing: [1.0, 1.0, 1.0]
+  crop_size: [256, 256, 32]
+  target_shape: [256, 256, 32]
+  padding_mode: constant
+  normalization: minmax
+  normalization_range: [-1, 1]
+  max_voxels: 67108864
+split:
+  train: 0.70
+  validation: 0.15
+  test: 0.15
+seed: 42
+export_format: npy
+logs_dir: ../logs

@@ -1,0 +1,21 @@
+# Research starting configuration. Tune only on training/validation, never a test set.
+shape: [128, 128, 32]
+device: auto
+threads: 4
+seed: 42
+epochs: 100
+batch_size: 1
+steps_per_epoch: 100
+learning_rate: 0.0002
+smoke_test: false
+vq:
+  base: 16
+  latent_channels: 16
+  codes: 128
+  commitment: 0.25
+# 0 = VQ-VAE. A positive value enables VQ-GAN patch adversarial loss.
+gan_weight: 0.05
+gan_start_epoch: 5
+unet_base: 32
+diffusion_steps: 1000
+conditional: true

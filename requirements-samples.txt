@@ -1,0 +1,2 @@
+# Only needed for the explicit 3D Slicer sample download/conversion script.
+SimpleITK>=2.3,<3
