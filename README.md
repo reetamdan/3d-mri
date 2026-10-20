@@ -226,10 +226,12 @@ data/           Local dataset scaffold; contents excluded from Git
 python -m pytest -q
 ```
 
-The reference workspace passed **50 checks**, including real-volume integration
-and live trained-model inference. On a fresh clone, tests requiring downloaded
-samples or completed checkpoints skip; tests never download data automatically.
-GitHub Actions runs the offline CPU suite.
+The current local verification passed **61 automated tests** and **20 Chrome
+workflow scenarios**, including real-volume integration, downloads, responsive
+layouts, and live trained-model inference. See the [UI verification record](docs/ui-verification.md)
+for coverage and fixes. On a fresh clone, tests requiring downloaded samples or
+completed checkpoints skip; tests never download data automatically. GitHub
+Actions runs the offline CPU suite.
 
 ## Configuration and credentials
 
@@ -248,6 +250,7 @@ their ignored output directories.
 - [M4 demonstration guide](docs/milestones/m4-demo.md)
 - [Presentation outline](docs/milestones/presentation.md)
 - [Verification record](docs/milestones/verification.md)
+- [Full application and UI verification](docs/ui-verification.md)
 - [Full modeling and downstream workflow](docs/milestones-2-5.md)
 - [Data-pipeline reference](docs/data-pipeline.md)
 - [Original technical Milestone 1 PRD](PRD.md)

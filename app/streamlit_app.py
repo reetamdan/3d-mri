@@ -26,6 +26,11 @@ st.markdown('''<style>
 h1 {font-weight:650; letter-spacing:-1.2px}
 [data-testid="stMetric"] {background:#16212d;border:1px solid #283848;padding:18px;border-radius:10px}
 [data-testid="stSidebar"] {border-right:1px solid #283848}
+@media (max-width:1100px) {
+  .block-container {padding-left:1rem; padding-right:1rem}
+  .block-container [data-testid="stHorizontalBlock"] {flex-direction:column}
+  .block-container [data-testid="stColumn"] {width:100% !important; flex:1 1 auto !important; min-width:0 !important}
+}
 </style>''', unsafe_allow_html=True)
 st.sidebar.markdown('## ◈ MRI RESEARCH')
 st.sidebar.caption('MEDICAL DIFFUSION / DATA · MODELS · EVALUATION')
@@ -45,6 +50,9 @@ if st.session_state.get('dataset_key') != fingerprint:
     st.session_state.dataset_key = fingerprint
 st.sidebar.caption('NIfTI .nii / .nii.gz · local processing')
 if st.sidebar.button('↻ Index & validate dataset', type='primary', use_container_width=True):
+    # Clear the previous snapshot before indexing, including when indexing fails.
+    for key in ('records', 'errors', 'report', 'preview', 'run'):
+        st.session_state.pop(key, None)
     try:
         with st.spinner('Reading and validating scans…'):
             records, errors, report = inspect_dataset(config)
@@ -160,19 +168,19 @@ else:
             with st.expander('Preview parameters', expanded=True):
                 st.caption('Preview changes apply here only. Download the YAML to reuse them for batch export.')
                 shape_cols = st.columns(3)
-                p['target_shape'] = [int(col.number_input(f'Target {label}', min_value=1, max_value=1024, value=int(v))) for col, label, v in zip(shape_cols, ('R', 'A', 'S'), p['target_shape'])]
+                p['target_shape'] = [int(col.number_input(f'Target {label}', min_value=1, max_value=max(1024, int(v)), value=int(v))) for col, label, v in zip(shape_cols, ('R', 'A', 'S'), p['target_shape'])]
                 p['normalization'] = st.selectbox('Normalization', ['minmax', 'zscore'], index=['minmax', 'zscore'].index(p['normalization']))
                 crop = st.checkbox('Center crop / pad', value=p.get('crop_size') is not None)
                 if crop:
                     cols = st.columns(3)
-                    p['crop_size'] = [int(col.number_input(f'Crop {axis}', 1, 1024, int(v))) for col, axis, v in zip(cols, ('R', 'A', 'S'), p.get('crop_size') or p['target_shape'])]
+                    p['crop_size'] = [int(col.number_input(f'Crop {axis}', 1, max(1024, int(v)), int(v))) for col, axis, v in zip(cols, ('R', 'A', 'S'), p.get('crop_size') or p['target_shape'])]
                 else:
                     p['crop_size'] = None
                 p['padding_mode'] = st.selectbox('Padding', ['constant', 'edge', 'reflect'], index=['constant', 'edge', 'reflect'].index(p.get('padding_mode', 'constant')))
                 resample = st.checkbox('Resample spacing in mm', value=p.get('target_spacing') is not None)
                 if resample:
                     cols = st.columns(3)
-                    p['target_spacing'] = [float(col.number_input(f'Spacing {axis} (mm)', .1, 20., float(v))) for col, axis, v in zip(cols, ('R', 'A', 'S'), p.get('target_spacing') or [1., 1., 1.])]
+                    p['target_spacing'] = [float(col.number_input(f'Spacing {axis} (mm)', min(.1, float(v)), max(20., float(v)), float(v))) for col, axis, v in zip(cols, ('R', 'A', 'S'), p.get('target_spacing') or [1., 1., 1.])]
                 else:
                     p['target_spacing'] = None
         preview_key = selected + json.dumps(p, sort_keys=True)

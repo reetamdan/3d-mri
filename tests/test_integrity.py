@@ -76,3 +76,15 @@ def test_dashboard_excludes_smoke_and_corrupted_checkpoints(tmp_path):
     assert research_runs(tmp_path) == [folder.parent]
     checkpoint.write_bytes(b'altered')
     assert research_runs(tmp_path) == []
+
+
+@pytest.mark.parametrize('info', [None, [], 42,
+    {'smoke_test': False, 'completed_epochs': 'one'},
+    {'smoke_test': False, 'completed_epochs': None},
+    {'smoke_test': False, 'completed_epochs': 1, 'checkpoint_file': None},
+])
+def test_dashboard_ignores_malformed_research_metadata(tmp_path, info):
+    folder = tmp_path/'invalid-run'/'vq'
+    folder.mkdir(parents=True)
+    (folder/'run.json').write_text(json.dumps(info))
+    assert research_runs(tmp_path) == []

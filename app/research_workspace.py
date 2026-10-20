@@ -17,8 +17,15 @@ def research_runs(root):
     for path in sorted(Path(root).glob('*/vq/run.json'), reverse=True):
         try:
             info = json.loads(path.read_text())
-            checkpoint = confined_path(path.parent, info.get('checkpoint_file', 'last.pt'))
-            if info.get('smoke_test', True) or info.get('completed_epochs', 0) < 1:
+            if not isinstance(info, dict):
+                continue
+            epochs = info.get('completed_epochs', 0)
+            checkpoint_file = info.get('checkpoint_file', 'last.pt')
+            if (not isinstance(epochs, int) or isinstance(epochs, bool) or epochs < 1
+                    or not isinstance(checkpoint_file, str)):
+                continue
+            checkpoint = confined_path(path.parent, checkpoint_file)
+            if info.get('smoke_test', True):
                 continue
             if checkpoint.is_file() and sha256_file(checkpoint) == info.get('checkpoint_sha256'):
                 result.append(path.parent.parent)
@@ -186,7 +193,7 @@ def experiments_page(root):
                 if report.get('smoke_test', True):
                     st.info('Test-only or legacy report excluded from research results.')
                     continue
-                st.json(report)
+                st.json(report, expanded=False)
                 st.download_button(f'Download {title.lower()}', path.read_bytes(), path.name, key=relative)
                 if relative == 'reconstruction/report.json':
                     from src.training.common import TrainingDataset, fingerprint
@@ -204,7 +211,8 @@ def experiments_page(root):
                         with col:
                             st.caption(label)
                             fig = slice_figure(volume, 'Axial', idx, limits=(-1, 1))
-                            fig.update_layout(xaxis_title='Tensor axis', yaxis_title='Tensor axis')
+                            fig.update_layout(title=f'Acquired-series slice · {idx+1}/{original.shape[2]}',
+                                              xaxis_title='Tensor axis', yaxis_title='Tensor axis')
                             st.plotly_chart(fig, use_container_width=True)
                     if st.button('Reconstruct selected input now'):
                         import torch
