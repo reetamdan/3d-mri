@@ -28,8 +28,10 @@ The project already contains a tested NIfTI/MRNet data layer, a channel-first
 PyTorch dataset, a 3D vector-quantized encoder/decoder, an optional discriminator,
 a conditioned U-Net/DDPM, evaluation utilities, and a Streamlit interface.
 The local machine has an NVIDIA RTX 5070 Ti Laptop GPU with about 12 GiB VRAM.
-CUDA-enabled PyTorch 2.11.0+cu128 was installed and a 3D convolution's forward and
-backward passes were verified on October 21, 2026.
+The baseline was trained with PyTorch 2.11.0+cu128 on October 21, 2026. Before
+GitHub publication, the runtime was upgraded to patched PyTorch 2.14.1+cu130,
+with updated certificate, HTTP, and packaging dependencies. Historical training
+versions remain in the experiment evidence; current dependencies are in the lockfile.
 
 The M4 configuration uses a reduced, recorded MRNet cohort and 128×128×32 inputs.
 The encoder reduces each spatial axis by four, yielding 32×32×8 latent grids.

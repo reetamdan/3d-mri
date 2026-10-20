@@ -15,6 +15,13 @@ supply credentials through the tool's environment or OS credential store.
 - Use `git diff --cached` before publishing changes. Ignore rules do not remove
   credentials that were previously committed.
 
+## Dependency baseline
+
+Published requirements use patched PyTorch, certifi, urllib3, and setuptools
+versions. GitHub dependency alerts and secret-scanning push protection are enabled.
+Historical experiment reports retain their original training versions; use the
+current requirements for installation rather than recreating older package pins.
+
 ## Data and application boundary
 
 Use de-identified MRI data and comply with the original publisher's usage terms.

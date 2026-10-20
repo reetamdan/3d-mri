@@ -86,6 +86,15 @@ Other checks: `pip check` reported no broken requirements; a CUDA 3D convolution
 forward/backward check passed; the live dashboard health endpoint returned
 **HTTP 200, `ok`** on `http://127.0.0.1:8501/_stcore/health`.
 
+### GitHub publication environment
+
+The publication review upgraded the serving/test environment to **PyTorch
+2.14.1+cu130 / CUDA 13.0**, **certifi 2026.10.19**, **urllib3 2.8.0**, and
+**setuptools 84.0.0** to address reported dependency advisories. The complete
+local suite then passed **50 tests in 32.31 seconds**, including actual trained
+checkpoint inference. `pip check` and CUDA 3D forward/backward validation passed.
+Historical training versions and measurements above are preserved as recorded.
+
 ## Files to present
 
 - [Problem analysis](m1-problem-analysis.md)

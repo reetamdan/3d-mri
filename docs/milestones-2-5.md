@@ -32,7 +32,9 @@ The source manifest records its provenance and unspecified mirror-license
 metadata; this is not a claim of official Stanford access approval.
 
 The machine has an NVIDIA RTX 5070 Ti Laptop GPU with approximately 12 GiB VRAM,
-and now runs PyTorch 2.11.0+cu128 with verified CUDA 12.8 execution. The code supports `device: auto`,
+and the publication environment uses patched PyTorch 2.14.1+cu130 with CUDA 13.0.
+Historical training used 2.11.0+cu128 and retains those versions in its evidence.
+The code supports `device: auto`,
 `cpu`, or `cuda`; explicit CUDA requests fail clearly if unavailable. The smoke
 configuration uses CPU. The M4 run records actual optimizer steps, duration,
 and peak allocated CUDA memory in its generated evidence. Larger experiments

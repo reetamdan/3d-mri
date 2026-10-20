@@ -78,7 +78,7 @@ For the dashboard and CPU tests, install the CPU PyTorch wheel followed by the
 application dependencies:
 
 ```bash
-python -m pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -r requirements.txt
 python -m streamlit run app/streamlit_app.py
 ```
@@ -90,17 +90,20 @@ download data on startup.
 
 ### NVIDIA GPU setup
 
-The reference experiment used an RTX 5070 Ti Laptop GPU and PyTorch
-`2.11.0+cu128`. On compatible NVIDIA hardware:
+The publication environment uses an RTX 5070 Ti Laptop GPU and patched PyTorch
+`2.14.1+cu130` (CUDA 13.0). On compatible NVIDIA hardware:
 
 ```bash
 python -m pip install -r requirements-cuda.txt
 python -c "import torch; print(torch.__version__); print('CUDA:', torch.cuda.is_available())"
 ```
 
-`requirements-lock.txt` records the reference Windows/CUDA environment.
+`requirements-lock.txt` records the patched Windows/CUDA environment.
 `requirements.txt` contains the general dependency ranges. Consult the
 [PyTorch installation guide](https://pytorch.org/get-started/locally/) for other hardware.
+Historical baseline training used `2.11.0+cu128`; its original software versions
+remain recorded with the measured results. Published installation instructions
+use the patched runtime.
 
 ## Data workflows
 
