@@ -17,7 +17,7 @@ supply credentials through the tool's environment or OS credential store.
 
 ## Dependency baseline
 
-Published requirements use patched PyTorch, certifi, urllib3, and setuptools
+Published requirements use patched PyTorch, Pillow, certifi, urllib3, and setuptools
 versions. GitHub dependency alerts and secret-scanning push protection are enabled.
 Historical experiment reports retain their original training versions; use the
 current requirements for installation rather than recreating older package pins.

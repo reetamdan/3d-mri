@@ -28,7 +28,7 @@ nibabel==5.4.2
 numpy==2.5.3
 packaging==26.3
 pandas==2.3.3
-pillow==12.3.0
+pillow==13.0.0
 plotly==6.9.0
 pluggy==1.6.0
 protobuf==7.36.1
@@ -49,7 +49,7 @@ setuptools==84.0.0
 simpleitk==2.5.6
 six==1.17.0
 starlette==1.6.0
-streamlit==1.63.0
+streamlit==1.66.1
 sympy==1.14.0
 tifffile==2026.9.9
 toml==0.10.2

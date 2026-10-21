@@ -49,7 +49,7 @@ if st.session_state.get('dataset_key') != fingerprint:
         st.session_state.pop(key, None)
     st.session_state.dataset_key = fingerprint
 st.sidebar.caption('NIfTI .nii / .nii.gz · local processing')
-if st.sidebar.button('↻ Index & validate dataset', type='primary', use_container_width=True):
+if st.sidebar.button('↻ Index & validate dataset', type='primary', width='stretch'):
     # Clear the previous snapshot before indexing, including when indexing fails.
     for key in ('records', 'errors', 'report', 'preview', 'run'):
         st.session_state.pop(key, None)
@@ -102,7 +102,7 @@ if page == 'Dataset Overview':
     if records:
         st.dataframe(pd.DataFrame({'Statistic': ['Minimum', 'Mean', 'Maximum'],
                      'Shape · R/A/S order only after canonicalization': [str(report['shape'][k]) for k in ('min', 'mean', 'max')],
-                     'Spacing · native units': [str(report['spacing_native_units'][k]) for k in ('min', 'mean', 'max')]}), hide_index=True, use_container_width=True)
+                     'Spacing · native units': [str(report['spacing_native_units'][k]) for k in ('min', 'mean', 'max')]}), hide_index=True, width='stretch')
         st.caption(f'{report["subjects"]} subjects · {report["distinct_shapes"]} distinct shapes · units: {report["spatial_units"]}')
     st.metric('Invalid scans', report['invalid_scans'])
     st.caption('Scan and subject labels are pseudonymous hashes, not source names. Hashing is not full anonymization.')
@@ -112,7 +112,7 @@ elif page == 'Dataset Quality':
     for col, key in zip(cols, ('discovered_scans', 'valid_scans', 'invalid_scans')):
         col.metric(key.replace('_', ' ').title(), report[key])
     if st.session_state.get('errors'):
-        st.dataframe(st.session_state.errors, hide_index=True, use_container_width=True)
+        st.dataframe(st.session_state.errors, hide_index=True, width='stretch')
     else:
         st.success('No invalid scans detected in the current index.')
     st.json(report, expanded=True)
@@ -156,12 +156,12 @@ else:
             with col:
                 count = canonical.shape[PLANES[plane]]
                 idx = st.slider(f'{plane} slice', 0, count-1, count//2) if count > 1 else 0
-                st.plotly_chart(slice_figure(canonical, plane, idx, nib.affines.voxel_sizes(affine)), use_container_width=True)
+                st.plotly_chart(slice_figure(canonical, plane, idx, nib.affines.voxel_sizes(affine)), width='stretch')
         st.caption(f'Original shape: {meta["volume_shape"]} · Original orientation: {meta["orientation"]} · Display: canonical RAS · Units: {meta["spatial_unit"]}')
         with st.expander('Spatial metadata'):
             st.json({k: v for k, v in meta.items() if k != 'file_path'})
         if st.checkbox('Render 3D volume (downsampled for performance)'):
-            st.plotly_chart(volume_figure(canonical, affine), use_container_width=True)
+            st.plotly_chart(volume_figure(canonical, affine), width='stretch')
     else:
         p = dict(config['preprocessing'])
         if page == 'Preprocessing':
@@ -204,7 +204,7 @@ else:
                 for col, data, title in zip(cols, (aligned, result), ('Original intensities · aligned to output grid', 'Processed')):
                     with col:
                         st.subheader(title)
-                        st.plotly_chart(slice_figure(data, plane, idx, processed_meta['voxel_spacing']), use_container_width=True)
+                        st.plotly_chart(slice_figure(data, plane, idx, processed_meta['voxel_spacing']), width='stretch')
                         st.caption(f'Shape {data.shape} · Range {data.min():.3f} to {data.max():.3f}')
                 st.caption(f'Source shape: {volume.shape}. Comparison samples the original on the output world-coordinate grid; cropped-away anatomy must be checked in MRI Viewer. Display contrast is scaled independently.')
                 st.json(processed_meta, expanded=False)
@@ -216,7 +216,7 @@ else:
             cols = st.columns(2)
             for col, data, title in zip(cols, (volume, result), ('Original intensity', 'Processed intensity')):
                 with col:
-                    st.plotly_chart(histogram(data, title), use_container_width=True)
+                    st.plotly_chart(histogram(data, title), width='stretch')
                     st.dataframe(pd.DataFrame([intensity_stats(data)]), hide_index=True)
             if st.button('Calculate interpolation reconstruction baseline'):
                 try:
@@ -226,5 +226,5 @@ else:
                 except ValueError as exc:
                     st.warning(str(exc))
         else:
-            st.plotly_chart(histogram(volume, 'Original intensity'), use_container_width=True)
+            st.plotly_chart(histogram(volume, 'Original intensity'), width='stretch')
             st.info('Run a preview to compare the original and processed volumes.')

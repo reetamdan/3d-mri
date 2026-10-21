@@ -31,6 +31,11 @@ and its recorded results remain reproducible historical experiments.
 
 From the project directory, activate the existing virtual environment and run:
 
+On Windows, stop this project's running Streamlit process before upgrading the
+environment so loaded Python/Pillow libraries are not locked. Restart the app
+after installation. The publication runtime uses Pillow 13 and Streamlit 1.66.1;
+older Streamlit releases constrain Pillow to the vulnerable pre-13 range.
+
 ```bash
 python -m pip install -e ".[dev,metrics]"
 python -m pip check

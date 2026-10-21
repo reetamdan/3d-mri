@@ -70,7 +70,7 @@ def mrnet_page(root):
                 fig = go.Figure(go.Heatmap(z=volume[i], colorscale='Gray', showscale=False))
                 fig.update_layout(title=f'{plane.title()} · {i+1}/{count}', height=350, template='plotly_dark')
                 fig.update_yaxes(autorange='reversed', scaleanchor='x')
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
         st.caption('These are independently acquired series. Slice positions are not synchronized across planes; physical affine/spacing are absent in MRNet arrays.')
         st.write(dict(zip(TASKS, labels[exam])))
         st.subheader('Prepare a model dataset')
@@ -156,8 +156,8 @@ def experiments_page(root):
         idx = st.slider('Generated slice', 0, data.shape[axis+1]-1, data.shape[axis+1]//2)
         fig = slice_figure(data[0], plane, idx)
         fig.update_layout(title=f'{section} · {idx+1}/{data.shape[axis+1]}', xaxis_title='Tensor axis', yaxis_title='Tensor axis')
-        st.plotly_chart(fig, use_container_width=True)
-        st.plotly_chart(histogram(data, 'Generated intensity distribution'), use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(histogram(data, 'Generated intensity distribution'), width='stretch')
         st.download_button('Download generated tensor', (run/'generated'/selected).read_bytes(), selected)
         with st.expander('Live trained-model generation'):
             st.caption('Runs the selected diffusion and VQ checkpoints now. Each request writes a fresh, traceable output folder.')
@@ -187,7 +187,7 @@ def experiments_page(root):
                 array = generated_volume(folder, record, manifest['shape'])[0]
                 figure = slice_figure(array, 'Axial', array.shape[2]//2, limits=(-1, 1))
                 figure.update_layout(title=f'New model sample · seed {record["seed"]}', xaxis_title='Tensor column', yaxis_title='Tensor row')
-                st.plotly_chart(figure, use_container_width=True)
+                st.plotly_chart(figure, width='stretch')
                 st.success('New inference completed and checksum-verified.')
                 st.download_button('Download new generated volume', (folder/record['file']).read_bytes(), record['file'])
     for title, relative in [('Paired reconstruction results', 'reconstruction/report.json'),
@@ -221,7 +221,7 @@ def experiments_page(root):
                             fig = slice_figure(volume, 'Axial', idx, limits=(-1, 1))
                             fig.update_layout(title=f'Acquired-series slice · {idx+1}/{original.shape[2]}',
                                               xaxis_title='Tensor axis', yaxis_title='Tensor axis')
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, width='stretch')
                     if st.button('Reconstruct selected input now'):
                         import torch
                         from src.training.common import device_for
@@ -235,7 +235,7 @@ def experiments_page(root):
                         st.write(reconstruction_metrics(original, result))
                         figure = slice_figure(result, 'Axial', idx, limits=(-1, 1))
                         figure.update_layout(title='Live trained VQ reconstruction', xaxis_title='Tensor column', yaxis_title='Tensor row')
-                        st.plotly_chart(figure, use_container_width=True)
+                        st.plotly_chart(figure, width='stretch')
                         st.success('Live reconstruction inference completed.')
             else:
                 st.info('No results recorded. Do not infer successful completion from available model code.')
