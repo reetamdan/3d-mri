@@ -14,7 +14,13 @@ from src.utils.seed import set_seed
 from src.utils.logging import write_json
 from src.utils.integrity import confined_path, sha256_file
 from .common import (TrainingDataset, device_for, fingerprint, save_checkpoint,
-                     read_checkpoint, fresh_output)
+                      read_checkpoint, fresh_output)
+from .protocol import cohort_records, evaluation_context, consume_protocol
+from .statistics import bootstrap_interval
+from .diagnostics import foreground_metrics
+from src.utils.artifacts import reference
+from .state import ModelEMA, rng_state, restore_rng, precision, scheduler_for
+from .latents import pack_latents, LatentCache
 
 
 def checkpoint_hash(path):
@@ -55,17 +61,21 @@ def train_vq(root, output, c, resume=False):
         with torch.no_grad():
             first = torch.stack([train[i][0] for i in range(min(c['batch_size'], len(train)))])
             features = model.encoder(first.to(device)).movedim(1, -1).reshape(-1, c['vq']['latent_channels'])
-            indices = torch.randperm(len(features), device=device)[:c['vq']['codes']]
-            if len(indices) != c['vq']['codes']:
-                raise ValueError('Not enough training features to initialize the codebook')
-            model.quantizer.embedding.weight.copy_(features[indices])
+            model.quantizer.initialize(features)
     optimizer = torch.optim.Adam(model.parameters(), lr=c['learning_rate'])
     gan = c.get('gan_weight', 0) > 0
     discriminator = PatchDiscriminator3D(c['vq']['base']).to(device) if gan else None
     dopt = torch.optim.Adam(discriminator.parameters(), lr=c['learning_rate']) if gan else None
+    accumulation = c.get('gradient_accumulation', 1)
+    if gan and accumulation != 1:
+        raise ValueError('VQ-GAN uses separate optimizers and currently requires gradient_accumulation=1')
+    amp, dtype, scaler = precision(c, device)
+    scheduler = scheduler_for(optimizer, c)
     history, start = [], 0
     if resume:
         ck = read_checkpoint(out/'last.pt', 'vq')
+        if ck.get('inference_only'):
+            raise ValueError('Compact inference exports cannot resume training')
         old, new = dict(ck['config']), dict(c)
         old.pop('epochs'); new.pop('epochs')
         if ck['dataset_fingerprint'] != data_fingerprint or old != new:
@@ -74,36 +84,46 @@ def train_vq(root, output, c, resume=False):
         if gan:
             discriminator.load_state_dict(ck['discriminator']); dopt.load_state_dict(ck['d_optimizer'])
         history, start = ck['history'], ck['epoch']
-        torch.set_rng_state(ck['torch_rng'])
-        if device.type == 'cuda' and ck.get('cuda_rng'):
-            torch.cuda.set_rng_state_all(ck['cuda_rng'])
+        if ck.get('scaler'):
+            scaler.load_state_dict(ck['scaler'])
+        if scheduler and ck.get('scheduler'):
+            scheduler.load_state_dict(ck['scheduler'])
+        restore_rng(ck, device)
     for epoch in range(start, c['epochs']):
         epoch_start = time.perf_counter()
         model.train()
-        values = []
-        for step, (x, _) in enumerate(loader_for(train, c, epoch)):
-            if step >= c['steps_per_epoch']:
+        values, updates = [], 0
+        loader = loader_for(train, c, epoch)
+        batches = min(len(loader), c['steps_per_epoch'])
+        optimizer.zero_grad(set_to_none=True)
+        for step, (x, _) in enumerate(loader):
+            if step >= batches:
                 break
             x = x.to(device)
-            reconstruction, quantization, perplexity = model(x)
-            reconstruction_loss = F.l1_loss(reconstruction, x)
-            loss = reconstruction_loss+quantization
-            dloss = torch.zeros((), device=device)
-            if gan and epoch >= c.get('gan_start_epoch', 1):
-                dopt.zero_grad()
-                dloss = (F.relu(1-discriminator(x)).mean()+F.relu(1+discriminator(reconstruction.detach())).mean())/2
-                if not torch.isfinite(dloss):
-                    raise ValueError('Nonfinite discriminator loss')
-                dloss.backward()
-                torch.nn.utils.clip_grad_norm_(discriminator.parameters(), 1., error_if_nonfinite=True)
-                dopt.step()
-                discriminator.requires_grad_(False)
-                loss = loss-c['gan_weight']*discriminator(reconstruction).mean()
+            with torch.autocast(device_type=device.type, dtype=dtype, enabled=amp):
+                reconstruction, quantization, perplexity = model(x)
+                reconstruction_loss = F.l1_loss(reconstruction, x)
+                loss = reconstruction_loss+quantization
+                dloss = torch.zeros((), device=device)
+                if gan and epoch >= c.get('gan_start_epoch', 1):
+                    dopt.zero_grad(set_to_none=True)
+                    dloss = (F.relu(1-discriminator(x)).mean()+F.relu(1+discriminator(reconstruction.detach())).mean())/2
+                    if not torch.isfinite(dloss):
+                        raise ValueError('Nonfinite discriminator loss')
+                    scaler.scale(dloss).backward(); scaler.unscale_(dopt)
+                    torch.nn.utils.clip_grad_norm_(discriminator.parameters(), 1., error_if_nonfinite=True)
+                    scaler.step(dopt); scaler.update()
+                    discriminator.requires_grad_(False)
+                    loss = loss-c['gan_weight']*discriminator(reconstruction).mean()
             if not torch.isfinite(loss):
                 raise ValueError('Nonfinite VQ training loss')
-            optimizer.zero_grad(); loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1., error_if_nonfinite=True)
-            optimizer.step()
+            group_size = min(accumulation, batches-(step//accumulation)*accumulation)
+            scaler.scale(loss/group_size).backward()
+            if (step+1) % accumulation == 0 or step+1 == batches:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1., error_if_nonfinite=True)
+                scaler.step(optimizer); scaler.update(); optimizer.zero_grad(set_to_none=True)
+                updates += 1
             if gan:
                 discriminator.requires_grad_(True)
             values.append([loss.item(), reconstruction_loss.item(), quantization.item(), perplexity.item(), dloss.item()])
@@ -115,28 +135,34 @@ def train_vq(root, output, c, resume=False):
                 validation_loss.append(F.l1_loss(model(x)[0], x).item())
         means = np.mean(values, axis=0).tolist()
         record = dict(epoch=epoch+1, loss=means[0], reconstruction_l1=means[1], vq_loss=means[2],
-            optimizer_steps=len(values),
+            optimizer_steps=updates, micro_batches=len(values), learning_rate=optimizer.param_groups[0]['lr'],
             duration_seconds=time.perf_counter()-epoch_start,
             codebook_perplexity=means[3], discriminator_loss=means[4],
             validation_l1=float(np.mean(validation_loss)) if validation_loss else None)
         history.append(record)
+        if scheduler:
+            scheduler.step(record['validation_l1'] if validation_loss else record['reconstruction_l1'])
         save_checkpoint(out/'last.pt', dict(kind='vq', model=model.state_dict(), model_config=model.config,
             optimizer=optimizer.state_dict(), discriminator=discriminator.state_dict() if gan else None,
-            d_optimizer=dopt.state_dict() if gan else None, torch_rng=torch.get_rng_state(),
-            cuda_rng=torch.cuda.get_rng_state_all() if device.type == 'cuda' else None,
+            d_optimizer=dopt.state_dict() if gan else None, **rng_state(),
+            scaler=scaler.state_dict(), scheduler=scheduler.state_dict() if scheduler else None,
             config=c, epoch=epoch+1, history=history, dataset_fingerprint=data_fingerprint,
-            train_ids=train.ids, shape=c['shape'], smoke_test=c.get('smoke_test', False)))
+            train_ids=train.ids, shape=c['shape'], smoke_test=c.get('smoke_test', False),
+            cohort_records=cohort_records(root)))
         write_json(out/'history.json', history)
         if validation_loss and record['validation_l1'] <= min(r['validation_l1'] for r in history):
             save_checkpoint(out/'best.pt', read_checkpoint(out/'last.pt', 'vq'))
         selected = 'best.pt' if c.get('select_best', False) and (out/'best.pt').exists() else 'last.pt'
         write_json(out/'run.json', dict(kind='vq', smoke_test=c.get('smoke_test', False),
             completed_epochs=epoch+1, train_count=len(train), validation_count=len(validation),
-            data_root=str(Path(root).resolve()), shape=c['shape'], dataset_fingerprint=data_fingerprint,
+            data_root=reference(root, out), shape=c['shape'], dataset_fingerprint=data_fingerprint,
             checkpoint_file=selected, checkpoint_sha256=sha256_file(out/selected),
             validation_status='Internal validation; anatomical review pending'))
         print(f'VQ epoch {epoch+1}: train L1={record["reconstruction_l1"]:.5f}; '
               f'validation L1={record["validation_l1"]}; perplexity={record["codebook_perplexity"]:.2f}', flush=True)
+        patience = c.get('early_stopping_patience', 0)
+        if patience and validation_loss and len(history)-1-min(range(len(history)), key=lambda i: history[i]['validation_l1']) >= patience:
+            break
     return str(out/('best.pt' if c.get('select_best', False) and (out/'best.pt').exists() else 'last.pt'))
 
 
@@ -166,10 +192,12 @@ def cache_latents(root, vq_path, output, device='auto'):
         raise ValueError('No training latents')
     sums, squares, count = np.array(train_tensors).sum(0)
     mean, std = sums/count, max(squares/count-(sums/count)**2, 1e-12)**.5
-    write_json(out/'manifest.json', dict(rows=rows, mean=float(mean), std=float(std),
-        normalization_fit='train_only', latent_shape=list(latent.shape), vq_path=str(Path(vq_path).resolve()),
+    packed = pack_latents(out, rows)
+    write_json(out/'manifest.json', dict(rows=rows, mean=float(mean), std=float(std), packed=packed,
+        normalization_fit='train_only', latent_shape=list(latent.shape), vq_path=reference(vq_path, out),
         vq_sha256=checkpoint_hash(vq_path), shape=ck['shape'], train_ids=ck['train_ids'],
-        smoke_test=ck['smoke_test'], dataset_fingerprint=ck['dataset_fingerprint']))
+        smoke_test=ck['smoke_test'], dataset_fingerprint=ck['dataset_fingerprint'],
+        cohort_records=ck.get('cohort_records', cohort_records(root))))
     return str(out/'manifest.json')
 
 
@@ -190,76 +218,126 @@ def train_diffusion(latent_dir, output, c, resume=False):
         raise ValueError('Training latents are empty')
     if not c.get('smoke_test', False) and (manifest['smoke_test'] or not any(r['split'] == 'validation' for r in manifest['rows'])):
         raise ValueError('Research diffusion requires a research VQ checkpoint and validation latents')
+    dropout = c.get('label_dropout', 0.)
     config = dict(channels=manifest['latent_shape'][0], base=c['unet_base'], label_dim=3 if conditional else 0,
-                  attention=c.get('attention', False), attention_heads=c.get('attention_heads', 4))
+                  attention=c.get('attention', False), attention_heads=c.get('attention_heads', 4),
+                  channel_mult=c.get('channel_mult'), allow_null_labels=conditional and dropout > 0)
     model = UNet3D(**config).to(device)
-    schedule = DDPM(c['diffusion_steps']).to(device)
+    schedule = DDPM(c['diffusion_steps'], c.get('prediction_type', 'epsilon')).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=c['learning_rate'])
+    ema = ModelEMA(model, c['ema_decay']) if c.get('ema_decay') else None
+    amp, dtype, scaler = precision(c, device)
+    scheduler = scheduler_for(optimizer, c)
+    cache = LatentCache(latent_dir, manifest)
     out = fresh_output(output, resume)
     history, start = [], 0
     if resume:
         ck = read_checkpoint(out/'last.pt', 'diffusion')
+        if ck.get('inference_only'):
+            raise ValueError('Compact inference exports cannot resume training')
         old, new = dict(ck['config']), dict(c)
         old.pop('epochs'); new.pop('epochs')
-        if old != new or ck['latent_manifest'] != manifest:
+        old_manifest, new_manifest = dict(ck['latent_manifest']), dict(manifest)
+        old_manifest.pop('vq_path', None); new_manifest.pop('vq_path', None)
+        if old != new or old_manifest != new_manifest:
             raise ValueError('Resume requires the same config and latent manifest')
         model.load_state_dict(ck['model']); optimizer.load_state_dict(ck['optimizer'])
         history, start = ck['history'], ck['epoch']
-        torch.set_rng_state(ck['torch_rng'])
-        if device.type == 'cuda' and ck.get('cuda_rng'):
-            torch.cuda.set_rng_state_all(ck['cuda_rng'])
+        if ema:
+            ema.load_state_dict(ck['ema'], device)
+        if ck.get('scaler'):
+            scaler.load_state_dict(ck['scaler'])
+        if scheduler and ck.get('scheduler'):
+            scheduler.load_state_dict(ck['scheduler'])
+        restore_rng(ck, device)
     for epoch in range(start, c['epochs']):
         epoch_start = time.perf_counter()
         model.train(); losses = []
         order = np.random.default_rng(c['seed']+epoch).permutation(len(train))
         for step in range(c['steps_per_epoch']):
-            batch = [train[int(order[(step*c['batch_size']+j) % len(order)])] for j in range(c['batch_size'])]
-            z = torch.stack([torch.load(latent_dir/r['file'], weights_only=True) for r in batch]).to(device)
-            z = (z-manifest['mean'])/manifest['std']
-            labels = torch.tensor([r['labels'] for r in batch], device=device) if conditional else None
-            t = torch.randint(schedule.steps, (len(batch),), device=device)
-            noise = torch.randn_like(z)
-            prediction = model(schedule.add_noise(z, t, noise), t, labels)
-            loss = F.mse_loss(prediction, noise)
-            if not torch.isfinite(loss):
-                raise ValueError('Nonfinite diffusion loss')
-            optimizer.zero_grad(); loss.backward()
+            optimizer.zero_grad(set_to_none=True)
+            accumulation = c.get('gradient_accumulation', 1)
+            for micro in range(accumulation):
+                batch_index = step*accumulation+micro
+                batch = [train[int(order[(batch_index*c['batch_size']+j) % len(order)])] for j in range(c['batch_size'])]
+                z = cache.batch(batch).to(device)
+                z = (z-manifest['mean'])/manifest['std']
+                labels = torch.tensor([r['labels'] for r in batch], device=device) if conditional else None
+                mask = torch.rand(len(batch), device=device) >= dropout if conditional and dropout else None
+                t = torch.randint(schedule.steps, (len(batch),), device=device)
+                noise = torch.randn_like(z)
+                with torch.autocast(device_type=device.type, dtype=dtype, enabled=amp):
+                    prediction = model(schedule.add_noise(z, t, noise), t, labels, condition_mask=mask)
+                    loss = F.mse_loss(prediction, schedule.training_target(z, t, noise))
+                if not torch.isfinite(loss):
+                    raise ValueError('Nonfinite diffusion loss')
+                scaler.scale(loss/accumulation).backward()
+                losses.append(loss.item())
+            scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1., error_if_nonfinite=True)
-            optimizer.step()
-            losses.append(loss.item())
+            scaler.step(optimizer); scaler.update()
+            if ema:
+                ema.update(model)
         model.eval()
-        validation_losses = []
+        validation_losses, ema_losses = [], []
+        strata = [[] for _ in range(4)]
+        ema_model = ema.evaluation_model(model) if ema else None
         validation_rng = torch.Generator(device=device).manual_seed(c['seed']+100000)
         with torch.no_grad():
             for row in manifest['rows']:
                 if row['split'] != 'validation':
                     continue
-                z = torch.load(latent_dir/row['file'], weights_only=True)[None].to(device)
+                z = cache.tensor(row)[None].to(device)
                 z = (z-manifest['mean'])/manifest['std']
                 y = torch.tensor([row['labels']], device=device) if conditional else None
-                t = torch.randint(schedule.steps, (1,), generator=validation_rng, device=device)
-                noise = torch.randn(z.shape, generator=validation_rng, device=device)
-                validation_losses.append(F.mse_loss(model(schedule.add_noise(z, t, noise), t, y), noise).item())
+                draws = c.get('validation_draws', 1)
+                if draws > schedule.steps:
+                    raise ValueError('validation_draws cannot exceed diffusion_steps')
+                for draw in range(draws):
+                    t = torch.randint(draw*schedule.steps//draws, (draw+1)*schedule.steps//draws,
+                                      (1,), generator=validation_rng, device=device)
+                    noise = torch.randn(z.shape, generator=validation_rng, device=device)
+                    noisy = schedule.add_noise(z, t, noise)
+                    target = schedule.training_target(z, t, noise)
+                    with torch.autocast(device_type=device.type, dtype=dtype, enabled=amp):
+                        value = F.mse_loss(model(noisy, t, y), target).item()
+                        if ema_model:
+                            ema_losses.append(F.mse_loss(ema_model(noisy, t, y), target).item())
+                    validation_losses.append(value)
+                    strata[min(3, int(t)*4//schedule.steps)].append(value)
+        selection = float(np.mean(ema_losses or validation_losses)) if validation_losses else float(np.mean(losses))
         history.append(dict(epoch=epoch+1, noise_mse=float(np.mean(losses)),
-            optimizer_steps=len(losses), duration_seconds=time.perf_counter()-epoch_start,
+            optimizer_steps=c['steps_per_epoch'], micro_batches=len(losses), duration_seconds=time.perf_counter()-epoch_start,
+            learning_rate=optimizer.param_groups[0]['lr'], selection_noise_mse=selection,
+            validation_ema_mse=float(np.mean(ema_losses)) if ema_losses else None,
+            validation_noise_by_quartile=[float(np.mean(v)) if v else None for v in strata],
             validation_noise_mse=float(np.mean(validation_losses)) if validation_losses else None))
+        if scheduler:
+            scheduler.step(selection)
         save_checkpoint(out/'last.pt', dict(kind='diffusion', model=model.state_dict(), model_config=config,
-            optimizer=optimizer.state_dict(), torch_rng=torch.get_rng_state(), config=c, epoch=epoch+1,
-            cuda_rng=torch.cuda.get_rng_state_all() if device.type == 'cuda' else None,
+            optimizer=optimizer.state_dict(), **rng_state(), config=c, epoch=epoch+1,
+            ema=ema.state_dict() if ema else None, ema_model=ema.shadow if ema else None,
+            weights_for_inference='ema' if ema else 'raw', scaler=scaler.state_dict(),
+            scheduler=scheduler.state_dict() if scheduler else None,
             history=history, latent_manifest=manifest, smoke_test=c.get('smoke_test', False) or manifest['smoke_test']))
         write_json(out/'history.json', history)
-        if validation_losses and history[-1]['validation_noise_mse'] <= min(r['validation_noise_mse'] for r in history):
+        if validation_losses and selection <= min(r.get('selection_noise_mse', r['validation_noise_mse']) for r in history):
             save_checkpoint(out/'best.pt', read_checkpoint(out/'last.pt', 'diffusion'))
         selected = 'best.pt' if c.get('select_best', False) and (out/'best.pt').exists() else 'last.pt'
         write_json(out/'run.json', dict(kind='diffusion', smoke_test=c.get('smoke_test', False),
             completed_epochs=epoch+1, checkpoint_file=selected, checkpoint_sha256=sha256_file(out/selected),
             train_count=len(train), validation_count=len(validation_losses)))
         print(f'Diffusion epoch {epoch+1}: MSE={history[-1]["noise_mse"]:.5f}', flush=True)
+        patience = c.get('early_stopping_patience', 0)
+        if patience and validation_losses and len(history)-1-min(range(len(history)), key=lambda i: history[i].get('selection_noise_mse', history[i]['validation_noise_mse'])) >= patience:
+            break
+    cache.close()
     return str(out/('best.pt' if c.get('select_best', False) and (out/'best.pt').exists() else 'last.pt'))
 
 
 @torch.no_grad()
-def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, device='auto'):
+def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, device='auto',
+             sampler='ddpm', sampling_steps=None, guidance_scale=1., eta=0., weights='auto'):
     if count < 1:
         raise ValueError('count must be positive')
     set_seed(seed)
@@ -275,8 +353,11 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
     if not conditional and labels is not None:
         raise ValueError('An unconditional model cannot generate labeled augmentation data')
     model = UNet3D(**ck['model_config']).to(device)
-    model.load_state_dict(ck['model'])
-    schedule = DDPM(ck['config']['diffusion_steps']).to(device)
+    selected_weights = ck.get('weights_for_inference', 'raw') if weights == 'auto' else weights
+    if selected_weights not in ('raw', 'ema') or (selected_weights == 'ema' and not ck.get('ema_model')):
+        raise ValueError('Requested inference weights are unavailable')
+    model.load_state_dict(ck['ema_model'] if selected_weights == 'ema' else ck['model'])
+    schedule = DDPM(ck['config']['diffusion_steps'], ck['config'].get('prediction_type', 'epsilon')).to(device)
     embeddings = vq.quantizer.embedding.weight
     lower = ((embeddings.amin(0)-manifest['mean'])/manifest['std']).view(1, -1, 1, 1, 1)
     upper = ((embeddings.amax(0)-manifest['mean'])/manifest['std']).view(1, -1, 1, 1, 1)
@@ -284,11 +365,15 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
     rows = []
     for i in range(count):
         y = torch.tensor([labels], device=device) if conditional else None
-        z = schedule.sample(model, (1, *manifest['latent_shape']), y, seed+i, clip_range=(lower, upper))
+        z, sampling_diagnostics = schedule.sample(model, (1, *manifest['latent_shape']), y, seed+i,
+            clip_range=(lower, upper), method=sampler, sampling_steps=sampling_steps,
+            guidance_scale=guidance_scale, eta=eta, return_diagnostics=True)
         z = z*manifest['std']+manifest['mean']
         if not torch.isfinite(z).all():
             raise ValueError('Denoising produced nonfinite latents; generation cannot be accepted')
         x = vq.decode(z, quantize=True)[0].cpu().numpy()
+        quantized = vq.quantizer(z)[0]
+        code_counts = torch.bincount(vq.quantizer.last_indices.flatten(), minlength=embeddings.shape[0]).cpu().tolist()
         if not np.isfinite(x).all():
             raise ValueError('Generated tensor is nonfinite')
         filename = f'synthetic_{i:04d}.npy'
@@ -297,23 +382,32 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
         np.save(out/latent_file, z[0].cpu().numpy(), allow_pickle=False)
         rows.append(dict(file=filename, latent_file=latent_file, seed=seed+i, conditioning_labels=labels,
             sha256=sha256_file(out/filename), latent_sha256=sha256_file(out/latent_file),
+            quantization_mse=float((z-quantized).square().mean()), code_counts=code_counts,
+            sampling_diagnostics=sampling_diagnostics,
             latent_std=float(z.std()), latent_abs_max=float(z.abs().max())))
     write_json(out/'manifest.json', dict(rows=rows, synthetic=True, smoke_test=ck['smoke_test'],
         sampler='DDPM posterior with predicted-clean-latent clipping to trained codebook channel bounds',
         normalized_latent_bounds=dict(lower=lower.flatten().tolist(), upper=upper.flatten().tolist()),
+        sampling=dict(method=sampler, sampling_steps=sampling_steps or schedule.steps,
+                      training_steps=schedule.steps, prediction_type=schedule.prediction_type,
+                      guidance_scale=guidance_scale, eta=eta, weights=selected_weights,
+                      classifier_free_guidance_trained=ck['model_config'].get('allow_null_labels', False),
+                      device=device.type, exported_weight_source=ck.get('exported_weight_source')),
+        conditioning_training_support=sum(r['split'] == 'train' and r.get('labels') == labels for r in manifest['rows']) if labels is not None else None,
+        vq_checkpoint=reference(vq_path, out), diffusion_checkpoint=reference(diffusion_path, out),
         label_semantics='Requested conditioning, not verified pathology',
         vq_sha256=checkpoint_hash(vq_path), diffusion_sha256=checkpoint_hash(diffusion_path),
         generator_train_ids=manifest['train_ids'], dataset_fingerprint=manifest['dataset_fingerprint'],
-        shape=manifest['shape']))
+        cohort_records=manifest.get('cohort_records', []), shape=manifest['shape']))
     return str(out/'manifest.json')
 
 
 @torch.no_grad()
-def evaluate_reconstruction(root, checkpoint, output, split='validation', device='auto'):
+def evaluate_reconstruction(root, checkpoint, output, split='validation', device='auto',
+                            training_root=None, protocol=None):
     device = device_for(device)
     model, ck = load_vq(checkpoint, device)
-    if ck['dataset_fingerprint'] != fingerprint(root):
-        raise ValueError('Evaluation dataset does not match checkpoint lineage')
+    context = evaluation_context(root, ck, split, training_root)
     data = TrainingDataset(root, split, ck['shape'])
     if not len(data):
         raise ValueError(f'{split} is empty; no reconstruction results can be reported')
@@ -326,12 +420,20 @@ def evaluate_reconstruction(root, checkpoint, output, split='validation', device
         np.save(target, restored)
         metrics = reconstruction_metrics(x[0].numpy(), restored[0], 2.)
         metrics = {k: v if np.isfinite(v) else None for k, v in metrics.items()}
-        rows.append(dict(scan_id=row['scan_id'], file=target.name, sha256=sha256_file(target), **metrics))
+        rows.append(dict(scan_id=row['scan_id'], patient_id=row.get('patient_id') or row['scan_id'],
+            file=target.name, sha256=sha256_file(target), **metrics,
+            **foreground_metrics(x[0].numpy(), restored[0])))
     report = dict(split=split, smoke_test=ck['smoke_test'], rows=rows,
-        input_dataset=str(Path(root).resolve()), shape=ck['shape'], checkpoint_sha256=sha256_file(checkpoint),
-        dataset_fingerprint=ck['dataset_fingerprint'],
+        input_dataset=reference(root, out), shape=ck['shape'], checkpoint_sha256=sha256_file(checkpoint),
+        dataset_fingerprint=fingerprint(root), evaluation_context=context,
+        confidence_interval_unit='patient' if all(r.get('patient_id') for r in data.rows) else 'exam; patient identities unavailable',
+        confidence_intervals={k: bootstrap_interval([r[k] for r in rows if r[k] is not None],
+            groups=[r['patient_id'] for r in rows if r[k] is not None])
+            for k in ('mse', 'mae', 'psnr', 'ssim') if any(r[k] is not None for r in rows)},
         means={k: float(np.mean([r[k] for r in rows if r[k] is not None])) if any(r[k] is not None for r in rows) else None
                for k in ('mse', 'mae', 'psnr', 'ssim')},
         anatomical_preservation='Requires paired visual review; these metrics alone do not establish preservation')
+    if protocol:
+        report['frozen_protocol'] = consume_protocol(protocol, context, split, out)
     write_json(out/'report.json', report)
     return report

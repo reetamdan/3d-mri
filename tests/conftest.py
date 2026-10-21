@@ -32,3 +32,20 @@ def config(tmp_path):
     c['logs_dir'] = str(tmp_path / 'logs')
     c['preprocessing'].update(target_shape=[16, 16, 8], crop_size=[18, 18, 10])
     return c
+
+
+@pytest.fixture
+def labeled_tensors(tmp_path):
+    """Artificial tensors/labels for software tests, never a research cohort."""
+    from src.utils.logging import write_csv
+    from src.utils.integrity import sha256_file
+    root = tmp_path/'labeled-tensors'
+    root.mkdir()
+    rows = []
+    for i, split in enumerate(('train', 'train', 'validation', 'validation')):
+        path = root/f'{i}.npy'
+        np.save(path, np.random.default_rng(i).uniform(-1, 1, (1, 16, 16, 16)).astype(np.float32))
+        rows.append(dict(scan_id=f'fixture-{i}', patient_id=f'fixture-patient-{i}', split=split,
+                         labels=[i % 2]*3, output_file=path.name, output_sha256=sha256_file(path)))
+    write_csv(root/'metadata.csv', rows, list(rows[0]))
+    return root

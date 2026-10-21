@@ -1,8 +1,6 @@
-import csv
 import json
 from pathlib import Path
 import shutil
-import numpy as np
 import pytest
 from src.data.pipeline import run_pipeline, inspect_dataset
 from src.data.indexing import index_dataset

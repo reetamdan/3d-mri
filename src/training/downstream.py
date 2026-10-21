@@ -10,6 +10,7 @@ from .common import TrainingDataset, device_for, fingerprint, fresh_output
 from src.utils.seed import set_seed
 from src.utils.logging import write_json
 from src.utils.integrity import generated_volume
+from .protocol import evaluation_context
 
 
 class MRIClassifier3D(nn.Module):
@@ -35,24 +36,30 @@ def classification_metrics(labels, probabilities):
         npos, nneg = int(y.sum()), int(len(y)-y.sum())
         auc = float((rankdata(p)[y == 1].sum()-npos*(npos+1)/2)/(npos*nneg)) if npos and nneg else None
         result[name] = dict(auc=auc, accuracy=float(((p >= .5) == y).mean()),
-                           brier=float(np.mean((p-y)**2)), positive=npos, negative=nneg)
+                            brier=float(np.mean((p-y)**2)), positive=npos, negative=nneg,
+                            threshold=.5,
+                            sensitivity=float((p[y == 1] >= .5).mean()) if npos else None,
+                            specificity=float((p[y == 0] < .5).mean()) if nneg else None)
     return result
 
 
 def compare_augmentation(root, generated_dir, output, shape=(128, 128, 32), limit=100,
-                         steps=100, seeds=(42, 43, 44), device='auto', smoke_test=False):
+                         steps=100, seeds=(42, 43, 44), device='auto', smoke_test=False,
+                         evaluation_root=None, evaluation_split='validation', bootstrap_samples=500):
     if steps < 1 or limit < 1 or not seeds:
         raise ValueError('Positive training steps, limit, and seeds are required')
     torch.set_num_threads(4)
     device = device_for(device)
     real = TrainingDataset(root, 'train', shape, limit, require_labels=True)
-    valid = TrainingDataset(root, 'validation', shape, require_labels=True)
+    evaluation_root = evaluation_root or root
+    valid = TrainingDataset(evaluation_root, evaluation_split, shape, require_labels=True)
     if not len(real) or not len(valid):
         raise ValueError('Real labeled train and validation splits are required')
     generated_dir = Path(generated_dir)
     manifest = json.loads((generated_dir/'manifest.json').read_text())
     if manifest['dataset_fingerprint'] != fingerprint(root):
         raise ValueError('Generated samples have a different dataset lineage')
+    context = evaluation_context(evaluation_root, manifest, evaluation_split, training_root=root)
     if not set(manifest['generator_train_ids']).issubset(real.ids):
         raise ValueError('Generator saw scans outside the limited-data cohort; this would invalidate the augmentation comparison')
     if manifest['smoke_test'] and not smoke_test:
@@ -96,9 +103,14 @@ def compare_augmentation(root, generated_dir, output, shape=(128, 128, 32), limi
                 for x, y in valid:
                     truth.append(y.numpy())
                     probabilities.append(model(x[None].to(device)).sigmoid()[0].cpu().numpy())
-            metrics = classification_metrics(np.array(truth), np.array(probabilities))
+            truth, probabilities = np.array(truth), np.array(probabilities)
+            metrics = classification_metrics(truth, probabilities)
+            intervals = classification_intervals(truth, probabilities,
+                groups=[r.get('patient_id') or r['scan_id'] for r in valid.rows],
+                seed=seed, resamples=bootstrap_samples)
             torch.save(dict(model=model.state_dict(), seed=seed, arm=arm, train_ids=real.ids), out/f'{arm}-{seed}.pt')
-            results.append(dict(seed=seed, arm=arm, training_loss=losses, metrics=metrics))
+            results.append(dict(seed=seed, arm=arm, training_loss=losses, metrics=metrics,
+                                confidence_intervals=intervals))
     comparison = {}
     for task in ('abnormal', 'acl', 'meniscus'):
         comparison[task] = {}
@@ -111,11 +123,39 @@ def compare_augmentation(root, generated_dir, output, shape=(128, 128, 32), limi
             comparison[task][metric] = dict(augmented_minus_real_mean=float(np.mean(deltas)) if deltas else None,
                 matched_seed_deltas=deltas, note='Positive favors augmentation for AUC/accuracy; negative for Brier. Descriptive, not a significance test.')
     report = dict(smoke_test=smoke_test, real_train_count=len(real), synthetic_count=len(synthetic),
+        confidence_interval_unit='patient' if all(r.get('patient_id') for r in valid.rows) else 'exam; patient identities unavailable',
         comparison=comparison,
         validation_count=len(valid), steps_per_arm=steps, results=results,
-        evaluation_split='official validation; not an independent test set',
+        evaluation_split=evaluation_split, evaluation_context=context,
         label_caveat='Synthetic labels are requested conditions, not expert-verified anatomy',
         conclusion='No improvement claim is automated. Inspect matched-seed differences, class support, uncertainty, and artifacts.',
         segmentation='MRNet labels are exam-level. Dice/IoU require a separate source of aligned segmentation masks.')
     write_json(out/'report.json', report)
     return report
+
+
+def classification_intervals(labels, probabilities, groups=None, seed=42, resamples=500):
+    """Patient-cluster bootstrap when IDs exist; otherwise explicitly exam-level."""
+    classification_metrics(labels, probabilities)
+    if resamples < 100:
+        raise ValueError('Use at least 100 bootstrap resamples')
+    labels, probabilities = np.asarray(labels), np.asarray(probabilities)
+    identities = np.arange(len(labels)).astype(str) if groups is None else np.asarray(groups).astype(str)
+    if identities.shape != (len(labels),):
+        raise ValueError('One cluster identity is required per exam')
+    clusters = [np.flatnonzero(identities == name) for name in np.unique(identities)]
+    values = {task: {metric: [] for metric in ('auc', 'accuracy', 'brier', 'sensitivity', 'specificity')}
+              for task in ('abnormal', 'acl', 'meniscus')}
+    rng = np.random.default_rng(seed)
+    for _ in range(resamples):
+        index = np.concatenate([clusters[i] for i in rng.integers(len(clusters), size=len(clusters))])
+        metrics = classification_metrics(labels[index], probabilities[index])
+        for task in values:
+            for metric in values[task]:
+                if metrics[task][metric] is not None:
+                    values[task][metric].append(metrics[task][metric])
+    return {task: {metric: dict(lower=float(np.quantile(draws, .025)) if draws else None,
+                               upper=float(np.quantile(draws, .975)) if draws else None,
+                               defined_resamples=len(draws), requested_resamples=resamples,
+                               clusters=len(clusters), seed=seed, confidence=.95)
+                   for metric, draws in metrics.items()} for task, metrics in values.items()}

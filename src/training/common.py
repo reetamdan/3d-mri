@@ -5,7 +5,6 @@ from pathlib import Path
 import torch
 from torch.nn import functional as F
 from src.data.dataset import MRIDataset
-from src.utils.logging import write_json
 from src.utils.integrity import confined_path, sha256_file
 
 
@@ -81,12 +80,60 @@ def fresh_output(path, resume=False):
 
 def model_config(path):
     import yaml
+    import math
     c = yaml.safe_load(Path(path).read_text())
-    if len(c['shape']) != 3 or any(s < 8 or s % 8 for s in c['shape']):
+    if not isinstance(c, dict):
+        raise ValueError('Model configuration must be a YAML mapping')
+    shape = c.get('shape')
+    if (not isinstance(shape, (list, tuple)) or len(shape) != 3
+            or any(not isinstance(s, int) or isinstance(s, bool) or s < 8 or s % 8 for s in shape)):
         raise ValueError('Training shape must be three multiples of 8, at least 8')
+    if math.prod(shape) > 67108864:
+        raise ValueError('Training shape exceeds the per-volume allocation limit')
     for key in ('epochs', 'batch_size', 'steps_per_epoch', 'threads'):
-        if c[key] < 1:
-            raise ValueError(f'{key} must be positive')
-    if c['learning_rate'] <= 0 or c.get('limit', 1) < 1:
-        raise ValueError('Learning rate and optional sample limit must be positive')
+        if not isinstance(c.get(key), int) or isinstance(c[key], bool) or c[key] < 1:
+            raise ValueError(f'{key} must be a positive integer')
+    rate = c.get('learning_rate')
+    if not isinstance(rate, (int, float)) or not math.isfinite(rate) or rate <= 0:
+        raise ValueError('Learning rate must be finite and positive')
+    if not isinstance(c.get('limit', 1), int) or c.get('limit', 1) < 1:
+        raise ValueError('Optional sample limit must be a positive integer')
+    if not isinstance(c.get('seed'), int) or isinstance(c['seed'], bool) or not 0 <= c['seed'] < 2**32:
+        raise ValueError('seed must be an integer in [0,2**32)')
+    if c.get('prediction_type', 'epsilon') not in ('epsilon', 'v'):
+        raise ValueError('prediction_type must be epsilon or v')
+    if not isinstance(c.get('gradient_accumulation', 1), int) or c.get('gradient_accumulation', 1) < 1:
+        raise ValueError('gradient_accumulation must be a positive integer')
+    if not isinstance(c.get('label_dropout', 0.), (int, float)) or not 0 <= c.get('label_dropout', 0.) < 1:
+        raise ValueError('label_dropout must be in [0,1)')
+    if c.get('ema_decay') is not None and (not isinstance(c['ema_decay'], (int, float)) or not 0 < c['ema_decay'] < 1):
+        raise ValueError('ema_decay must be in (0,1)')
+    if (c.get('lr_schedule', 'none') not in ('none', 'plateau')
+            or not isinstance(c.get('early_stopping_patience', 0), int) or c.get('early_stopping_patience', 0) < 0):
+        raise ValueError('Invalid scheduler or early-stopping patience')
+    if (not isinstance(c.get('diffusion_steps'), int) or c['diffusion_steps'] < 2
+            or not isinstance(c.get('validation_draws', 1), int) or not 1 <= c.get('validation_draws', 1) <= c['diffusion_steps']):
+        raise ValueError('Use >=2 diffusion steps and 1..diffusion_steps validation draws')
+    multipliers = c.get('channel_mult')
+    if multipliers is not None and (not isinstance(multipliers, list) or len(multipliers) < 2
+            or any(not isinstance(v, int) or isinstance(v, bool) or v < 1 for v in multipliers)
+            or min(c['shape'])//4 < 2**(len(multipliers)-1)):
+        raise ValueError('Training geometry cannot support the configured U-Net depth')
+    if not isinstance(c.get('gan_weight', 0), (int, float)) or not math.isfinite(c.get('gan_weight', 0)) or c.get('gan_weight', 0) < 0:
+        raise ValueError('Learning rate must be finite and GAN weight nonnegative')
+    if not isinstance(c.get('vq'), dict):
+        raise ValueError('vq must define an encoder/codebook configuration')
+    for key in ('base', 'latent_channels', 'codes'):
+        if not isinstance(c['vq'].get(key), int) or isinstance(c['vq'][key], bool) or c['vq'][key] < 1:
+            raise ValueError(f'vq.{key} must be a positive integer')
+    if c['vq']['codes'] < 2:
+        raise ValueError('The vector codebook requires at least two codes')
+    base, heads = c.get('unet_base'), c.get('attention_heads', 4)
+    if not isinstance(base, int) or base < 2 or not isinstance(heads, int) or heads < 1:
+        raise ValueError('Invalid U-Net width or attention-head count')
+    if c.get('attention') and (base*(multipliers[-1] if multipliers else 2)) % heads:
+        raise ValueError('Attention heads must divide the bottleneck channel count')
+    for flag in ('mixed_precision', 'select_best', 'initialize_codebook', 'conditional', 'smoke_test', 'attention'):
+        if flag in c and not isinstance(c[flag], bool):
+            raise ValueError(f'{flag} must be true or false')
     return c

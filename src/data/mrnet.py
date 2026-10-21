@@ -14,6 +14,7 @@ from .preprocessing import normalize
 from .indexing import token
 from src.utils.logging import write_json, write_csv
 from src.utils.integrity import sha256_file
+from src.utils.artifacts import reference
 
 TASKS = ('abnormal', 'acl', 'meniscus')
 PLANES = ('axial', 'sagittal', 'coronal')
@@ -87,7 +88,7 @@ def prepare_mrnet(root, output, plane='sagittal', shape=(128, 128, 32), limit=No
     write_json(output/'experiment.json', dict(dataset='MRNet', plane=plane, shape=list(shape),
         tensor_layout='[C, row, column, slice]; physical orientation/spacing unavailable',
         split_policy='Official MRNet train/valid preserved; no exam-level random resplitting',
-        patient_identifiers_available=False, labels=list(TASKS), root=str(root.resolve())))
+        patient_identifiers_available=False, labels=list(TASKS), root=reference(root, output)))
     report = dict(valid_scans=len(rows), invalid_scans=len(errors),
         split_scans={s: sum(r['split'] == s for r in rows) for s in ('train', 'validation', 'test')})
     write_json(output/'report.json', report)

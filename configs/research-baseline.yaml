@@ -1,0 +1,25 @@
+# Matched-budget control for the research-v2 study; no claims of independence.
+shape: [128, 128, 32]
+device: cuda
+threads: 4
+seed: 42
+epochs: 30
+batch_size: 2
+steps_per_epoch: 64
+learning_rate: 0.0003
+smoke_test: false
+initialize_codebook: true
+select_best: true
+vq:
+  base: 16
+  latent_channels: 8
+  codes: 128
+  commitment: 0.25
+gan_weight: 0
+unet_base: 32
+attention: true
+attention_heads: 4
+diffusion_steps: 200
+prediction_type: epsilon
+conditional: true
+validation_draws: 4

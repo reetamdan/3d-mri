@@ -7,7 +7,6 @@ The two RegLib_C01 scans are timepoints of the same subject.
 from pathlib import Path
 import hashlib
 import json
-import sys
 import urllib.request
 import numpy as np
 import nibabel as nib

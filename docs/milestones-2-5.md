@@ -66,9 +66,10 @@ MRNet-v1.0/
 ```
 
 CSV files are headerless `exam_id,0_or_1` records. Each NPY is a scalar
-`[slice,row,column]` series. The current Redivis delivery may need to be arranged
-into this layout after approval; actual archive integration has not yet been
-tested on MRNet files. Temporary artificial layout fixtures test the adapter.
+`[slice,row,column]` series. Real Kaggle-mirror MRNet files have been downloaded,
+prepared, trained and tested using this layout. The official Redivis delivery may
+need rearrangement after approval; that separate archive-delivery format has not
+been integrated. Artificial layout fixtures additionally cover software edge cases.
 
 The three acquired planes can differ in sequence/contrast and are not registered
 views of one isotropic volume. Train separate models per selected series. The
@@ -144,9 +145,10 @@ This is full-step DDPM sampling with the posterior variance and predicted-clean
 latent bounds derived from the trained codebook's per-channel extrema. The
 initial unbounded protocol exhibited extreme latent amplitudes and is retained
 as a sampling ablation. Bounding a sample is not proof of anatomical fidelity.
-There is no fast
-DDIM sampler, classifier-free guidance, or EMA in this baseline. A fixed schedule
-and smoke run with decreasing loss do not prove convergence.
+The historical M4 configuration does not use EMA, guidance or DDIM. Research v2
+adds these as explicit options, including multiresolution denoising, v-prediction,
+packed latent caches and matched-seed comparisons; see [the upgrade guide](research-upgrade.md).
+A decreasing denoising loss alone does not prove convergence or anatomical quality.
 
 ### 4. Generate and evaluate
 
@@ -162,13 +164,18 @@ are not verified clinical labels. Choose clinically plausible conditioning
 combinations represented in the training cohort and inspect class fidelity.
 
 Unpaired generation diagnostics include pairwise MS-SSIM diversity, intensity
-ranges, per-axis adjacent-slice MAE, and nearest-training MSE as a limited
-memorization screen. Real and generated diversity use the same geometry/protocol.
+ranges, per-axis adjacent-slice MAE, and raw/pooled-spatial nearest-training
+distances as limited memorization screens. The updated search covers the full
+recorded generator training cohort, separately from the diversity sample cap.
+Real and generated diversity use the same geometry/protocol; selection and class
+matching are reported. Updated fields distinguish the real comparison split.
 The internal MS-SSIM implementation uses a Gaussian window of 3 and up to five
 scales, truncating and renormalizing standard weights for thin volumes. The
 actual number of scales is reported; these values should not be directly compared
 with a paper using a different window/scale protocol. Tests establish basic
-identity and differing-input behavior, not independent scientific benchmarking.
+identity and differing-input behavior. Research v2 additionally checks single- and
+five-scale values against `pytorch-msssim` under a matching numerical protocol;
+that does not independently validate medical interpretation of the metric.
 
 SSIM/PSNR are reported for paired VQ reconstructions, not arbitrary generated vs
 real pairs. Lower diversity MS-SSIM can indicate noise as well as diversity;

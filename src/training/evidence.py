@@ -9,6 +9,7 @@ from src.metrics import downsample_reconstruction_baseline
 from src.utils.integrity import sha256_file, generated_volume
 from src.utils.logging import write_json
 from .common import TrainingDataset, fingerprint, read_checkpoint
+from src.utils.artifacts import resolve_reference
 
 
 def font(size=16):
@@ -61,8 +62,8 @@ def slice_grid(volumes, labels, path):
 def export_evidence(run_dir):
     root = Path(run_dir).resolve()
     status = json.loads((root/'status.json').read_text())
-    data = Path(status['data_root'])
-    vq_path, diffusion_path = Path(status['vq_checkpoint']), Path(status['diffusion_checkpoint'])
+    data = resolve_reference(root, status['data_root'])
+    vq_path, diffusion_path = (resolve_reference(root, status[k]) for k in ('vq_checkpoint', 'diffusion_checkpoint'))
     vq, diffusion = read_checkpoint(vq_path, 'vq'), read_checkpoint(diffusion_path, 'diffusion')
     if vq['smoke_test'] or diffusion['smoke_test']:
         raise ValueError('Smoke runs cannot supply M4 trained-model evidence')
@@ -75,7 +76,7 @@ def export_evidence(run_dir):
             or generated['vq_sha256'] != sha256_file(vq_path)
             or generated['diffusion_sha256'] != sha256_file(diffusion_path)):
         raise ValueError('Evidence lineage does not match the selected models and dataset')
-    source_path = Path(status['source_root'])/'source_manifest.json'
+    source_path = resolve_reference(root, status['source_root'])/'source_manifest.json'
     if sha256_file(source_path) != status['source_manifest_sha256']:
         raise ValueError('Source manifest changed after training')
     source = json.loads(source_path.read_text())
@@ -108,8 +109,12 @@ def export_evidence(run_dir):
     repeat = root/'seed-repeat'
     if not (repeat/'manifest.json').exists():
         from .experiments import generate
+        sampling = generated.get('sampling', {})
         generate(vq_path, diffusion_path, repeat, count=1, seed=generated['rows'][0]['seed'],
-                 labels=generated['rows'][0]['conditioning_labels'], device='auto')
+                 labels=generated['rows'][0]['conditioning_labels'], device=sampling.get('device', 'auto'),
+                 sampler=sampling.get('method', 'ddpm'), sampling_steps=sampling.get('sampling_steps'),
+                 guidance_scale=sampling.get('guidance_scale', 1.), eta=sampling.get('eta', 0.),
+                 weights=sampling.get('weights', 'auto'))
     repeated = json.loads((repeat/'manifest.json').read_text())
     generated_volume(repeat, repeated['rows'][0], generated['shape'])
     reproducible = repeated['rows'][0]['sha256'] == generated['rows'][0]['sha256']
@@ -164,7 +169,7 @@ def export_evidence(run_dir):
         '## Generated-volume diagnostics', '', f'- Generated volumes: {len(samples)}.',
         f'- Sampling protocol: {generated.get("sampler", "Legacy unbounded DDPM")}.',
         f'- Pairwise adaptive 3D MS-SSIM: {number(diagnostics["generated_diversity"]["mean_ms_ssim"])}.',
-        f'- Real-training comparison MS-SSIM: {number(diagnostics["real_training_diversity"]["mean_ms_ssim"])}.',
+        f'- Real reference ({diagnostics.get("real_comparison_split", "train")}) MS-SSIM: {number(diagnostics.get("real_reference_diversity", diagnostics["real_training_diversity"])["mean_ms_ssim"])}.',
         f'- Protocol: window {diagnostics["generated_diversity"]["window"]}, {diagnostics["generated_diversity"]["levels"]} scales.',
         '- All generated arrays are finite, normalized, shape-checked, and checksum-verified.',
         f'- Same-model, same-device, same-seed repeated sample has identical bytes: {reproducible}.',

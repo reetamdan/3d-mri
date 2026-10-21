@@ -11,13 +11,14 @@ from src.training.common import model_config
 from src.training.experiments import train_vq, cache_latents, train_diffusion, generate, evaluate_reconstruction
 from src.training.evaluation import evaluate_generation
 from src.utils.logging import write_json
+from src.utils.artifacts import resolve_reference
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
     latest = json.loads((ROOT/'data/metadata/latest_run.json').read_text())
-    data = latest['output_dir']
+    data = str(resolve_reference(ROOT/'data/metadata', latest['output_dir']))
     output = ROOT/'runs'/('SMOKE_TEST-'+datetime.now().strftime('%Y%m%d-%H%M%S'))
     c = model_config(ROOT/'configs/smoke-models.yaml')
     vq = train_vq(data, output/'vq', c)

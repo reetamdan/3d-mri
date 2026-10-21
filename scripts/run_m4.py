@@ -15,6 +15,7 @@ from src.training.experiments import train_vq, cache_latents, train_diffusion, g
 from src.training.evaluation import evaluate_generation
 from src.utils.integrity import sha256_file, confined_path
 from src.utils.logging import write_json
+from src.utils.artifacts import reference, resolve_reference
 
 
 def run(args):
@@ -36,8 +37,8 @@ def run(args):
     output.mkdir(parents=True, exist_ok=True)
     start = time.perf_counter()
     status = dict(started_at=datetime.now(timezone.utc).isoformat(), stages={},
-        source_manifest_sha256=sha256_file(manifest_path), source_root=str(source.resolve()),
-        data_root=str(data.resolve()), configs=dict(vq=vq_config, diffusion=diffusion_config),
+        source_manifest_sha256=sha256_file(manifest_path), source_root=reference(source, output),
+        data_root=reference(data, output), configs=dict(vq=vq_config, diffusion=diffusion_config),
         environment=dict(python=platform.python_version(), torch=torch.__version__, cuda=torch.version.cuda,
             gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else None))
     status_path = output/'status.json'
@@ -64,7 +65,7 @@ def run(args):
         stage('preprocess', lambda: prepare_mrnet(source, data, 'sagittal', vq_config['shape']))
     else:
         experiment = json.loads((data/'experiment.json').read_text())
-        if Path(experiment['root']).resolve() != source.resolve() or experiment['shape'] != vq_config['shape']:
+        if resolve_reference(data, experiment['root']) != source.resolve() or experiment['shape'] != vq_config['shape']:
             raise ValueError('Existing processed dataset has different source or geometry')
         fingerprint(data)
     vq = stage('train_vq', lambda: train_vq(data, output/'vq', vq_config,
@@ -88,15 +89,15 @@ def run(args):
           output/'generation-report.json', max_samples=args.count))
     status.update(finished_at=datetime.now(timezone.utc).isoformat(), session_seconds=time.perf_counter()-start,
         peak_cuda_allocated_mib=max(previous_peak_mib, torch.cuda.max_memory_allocated()/1024**2) if torch.cuda.is_available() else None,
-        current_stage='complete', vq_checkpoint=str(Path(vq).resolve()),
-        diffusion_checkpoint=str(Path(diffusion).resolve()), dataset_fingerprint=fingerprint(data))
+        current_stage='complete', vq_checkpoint=reference(vq, output),
+        diffusion_checkpoint=reference(diffusion, output), dataset_fingerprint=fingerprint(data))
     write_json(status_path, status)
     # Evidence export is separate so figures/documents can be regenerated without retraining.
     from src.training.evidence import export_evidence
     stage('evidence', lambda: export_evidence(output))
     status['current_stage'] = 'complete'
     write_json(status_path, status)
-    write_json(output.parent/'latest_m4.json', dict(output_dir=str(output.resolve())))
+    write_json(output.parent/'latest_m4.json', dict(output_dir=reference(output, output.parent)))
     print(f'\nCompleted trained-model baseline: {output.resolve()}', flush=True)
 
 

@@ -1,7 +1,6 @@
 """MRNet import and research artifact inspection, separate from the NIfTI dashboard."""
 import json
 from pathlib import Path
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -9,6 +8,7 @@ from src.data.mrnet import TASKS, PLANES, labels_for, load_series, prepare_mrnet
 from src.visualization.mri_viewer import slice_figure
 from src.visualization.plots import histogram
 from src.utils.integrity import confined_path, sha256_file, generated_volume
+from src.utils.artifacts import resolve_reference
 
 
 def research_runs(root):
@@ -162,6 +162,12 @@ def experiments_page(root):
         with st.expander('Live trained-model generation'):
             st.caption('Runs the selected diffusion and VQ checkpoints now. Each request writes a fresh, traceable output folder.')
             seed = int(st.number_input('Sampling seed', min_value=0, max_value=2147483647, value=2026))
+            sampling = manifest.get('sampling', {})
+            method = st.selectbox('Sampling method', ['ddpm', 'ddim'], index=int(sampling.get('method') == 'ddim'))
+            training_steps = int(sampling.get('training_steps', 200))
+            sampling_steps = int(st.number_input('DDIM sampling steps', 1, training_steps, min(50, training_steps))) if method == 'ddim' else None
+            guidance_trained = sampling.get('classifier_free_guidance_trained', sampling.get('guidance_scale', 1.) != 1.)
+            guidance = float(st.number_input('Classifier-free guidance scale', 0., 5., 1.5, .1)) if guidance_trained else 1.
             condition = manifest['rows'][0].get('conditioning_labels')
             labels = [int(col.checkbox(task.title(), value=bool(value)))
                       for col, task, value in zip(st.columns(3), TASKS, condition)] if condition is not None else None
@@ -171,7 +177,8 @@ def experiments_page(root):
                 from src.training.experiments import generate
                 target = run/'interactive'/('sample-'+datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6])
                 with st.spinner('Sampling Gaussian noise with the trained model…'):
-                    generate(vq_checkpoint, diffusion_checkpoint, target, count=1, seed=seed, labels=labels)
+                    generate(vq_checkpoint, diffusion_checkpoint, target, count=1, seed=seed, labels=labels,
+                             sampler=method, sampling_steps=sampling_steps, guidance_scale=guidance)
                 st.session_state['live_generation'] = dict(run=str(run), folder=str(target))
             live = st.session_state.get('live_generation')
             if live and live['run'] == str(run):
@@ -197,10 +204,11 @@ def experiments_page(root):
                 st.download_button(f'Download {title.lower()}', path.read_bytes(), path.name, key=relative)
                 if relative == 'reconstruction/report.json':
                     from src.training.common import TrainingDataset, fingerprint
-                    if report['checkpoint_sha256'] != sha256_file(vq_checkpoint) or report['dataset_fingerprint'] != fingerprint(report['input_dataset']):
+                    input_dataset = resolve_reference(path.parent, report['input_dataset'])
+                    if report['checkpoint_sha256'] != sha256_file(vq_checkpoint) or report['dataset_fingerprint'] != fingerprint(input_dataset):
                         raise ValueError('Reconstruction report does not match the current checkpoint or dataset; evaluate again')
                     shape = report['shape']
-                    source = TrainingDataset(report['input_dataset'], report['split'], shape)
+                    source = TrainingDataset(input_dataset, report['split'], shape)
                     scan_id = st.selectbox('Reconstruction pair', [r['scan_id'] for r in report['rows']])
                     index = next(i for i, r in enumerate(source.rows) if r['scan_id'] == scan_id)
                     original = source[index][0][0].numpy()
@@ -232,3 +240,10 @@ def experiments_page(root):
             else:
                 st.info('No results recorded. Do not infer successful completion from available model code.')
     st.markdown('See **docs/milestones-2-5.md** for reproducible training commands, dataset requirements, and research limitations.')
+
+    tokenizer = run/'tokenizer.json'
+    if tokenizer.exists():
+        with st.expander('Tokenizer usage and quantization diagnostics'):
+            report = json.loads(tokenizer.read_text())
+            st.write({k: report[k] for k in ('samples', 'used_codes', 'dead_code_fraction', 'aggregate_perplexity', 'quantization_mse')})
+            st.bar_chart(report['counts'])

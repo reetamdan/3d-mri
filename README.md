@@ -12,6 +12,11 @@ and conditional latent DDPM, and inspect the results through a Streamlit dashboa
 The project includes a college M1–M4 assessment pack with methodology, implementation
 traceability, measured baseline results, and a trained-model demo guide.
 
+**Research v2** adds multi-resolution denoising, EMA, v-prediction, classifier-free
+guidance, DDIM, whole-cohort memorization checks, independent-cohort audit support,
+uncertainty, portable artifacts and a packaged CLI. See the
+[upgrade guide](docs/research-upgrade.md) and [model card](docs/model-card.md).
+
 > **Research prototype — not for clinical diagnosis or treatment.** The current
 > reconstruction model is functional and evaluated. Randomly generated volumes
 > remain blurry and do not reliably reproduce coherent knee anatomy.
@@ -24,9 +29,9 @@ traceability, measured baseline results, and a trained-model demo guide.
   MRNet's official train/validation assignments.
 - **MRI dashboard:** slice navigation, optional 3D rendering, intensity analysis,
   synchronized preprocessing comparisons, quality reports, and export.
-- **3D generative models:** VQ-VAE, optional patch-adversarial VQ-GAN training,
-  quantized latent caching, and time/label-conditioned DDPM with optional
-  bottleneck spatial/depth attention.
+- **3D generative models:** VQ-VAE with optional EMA codebook/reset, optional
+  patch-adversarial VQ-GAN training, contiguous latent caching, and configurable
+  multiresolution DDPM with attention, weight EMA, epsilon/v prediction and CFG/DDIM.
 - **Trained-model inference:** reconstruct validation inputs and sample fresh
   volumes with a chosen seed from the dashboard.
 - **Reproducible experiments:** explicit configurations, checkpoint resume,
@@ -80,6 +85,7 @@ application dependencies:
 ```bash
 python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -r requirements.txt
+python -m pip install -e ".[dev,metrics]"
 python -m streamlit run app/streamlit_app.py
 ```
 
@@ -178,6 +184,25 @@ After training, open **MRNet Dataset** and **Model Experiments** in the dashboar
 The latter supports live VQ reconstruction and new-seed generation. Historical
 smoke-test artifacts are excluded from research results.
 
+### 3. Research v2 comparison and independent evaluation
+
+```bash
+python scripts/download_mrnet_subset.py --output data/mrnet/MRNet-research-v2 --train 256 --validation 60 --planes sagittal --workers 8 --max-mib 1024
+mri3d-study
+python scripts/sampling_ablation.py
+python scripts/summarize_study.py
+```
+
+This runs matched-budget control/upgrade arms with three seeds on the same frozen
+256/60 cohort. It is an exploratory validation study, not a new independent test.
+Set **Research runs directory** to `runs/RESEARCH-V2` to inspect the arms. New
+datasets/checkpoints remain local artifacts and are not included in Git pull.
+
+The installed `mri3d` CLI also exposes `freeze-protocol`, external-cohort
+`evaluate-reconstruction`/`evaluate-generation`, `tokenizer-diagnostics`,
+`evaluate-features`, `prepare-review`, `summarize-review`, and `relocate`.
+The [upgrade guide](docs/research-upgrade.md) explains their contracts and limits.
+
 ## Reference results
 
 The recorded reduced-cohort experiment used 128×128×32 sagittal inputs:
@@ -203,6 +228,20 @@ See [the published baseline summary](docs/results/m4-baseline.md) for the
 protocol and limitations. Complete, locally generated evidence lives in each
 run's `evidence.json` and `evidence.md` after reproducing the experiment.
 
+### Research v2 results
+
+On the same **256/60** exploratory cohort, three matched training seeds produced:
+
+| Validation reconstruction | Control | Upgraded |
+|---|---:|---:|
+| PSNR, mean ± seed SD | 24.24292 ± 0.08266 dB | **25.17329 ± 0.07948 dB** |
+| SSIM, mean ± seed SD | 0.76283 ± 0.00661 | **0.79809 ± 0.00576** |
+
+The interpolation reference on these same 60 exams had PSNR 21.20469 dB and
+SSIM 0.76958. See [the complete research-v2 results](docs/results/research-v2.md)
+for every seed, tokenizer diagnostics, uncertainty scope and limitations.
+These results do not establish independent generalization or anatomical validity.
+
 ## Repository layout
 
 ```text
@@ -223,15 +262,22 @@ data/           Local dataset scaffold; contents excluded from Git
 ## Testing
 
 ```bash
-python -m pytest -q
+python -m ruff check .
+python -m mypy
+python -m pytest -q --cov --cov-report=term-missing
 ```
 
-The current local verification passed **61 automated tests** and **20 Chrome
-workflow scenarios**, including real-volume integration, downloads, responsive
-layouts, and live trained-model inference. See the [UI verification record](docs/ui-verification.md)
-for coverage and fixes. On a fresh clone, tests requiring downloaded samples or
+Research-v2 verification passed **124 automated tests** with **87.82% combined
+statement/branch coverage**, including actual CUDA checks here. The 20 existing
+Chrome workflows plus two upgraded-model checks passed, covering downloads,
+responsive layouts, live EMA/CFG/DDIM inference and tokenizer diagnostics. The
+[original UI record](docs/ui-verification.md) and [v2 guide](docs/research-upgrade.md)
+describe the tested scope. On a fresh clone, tests requiring downloaded samples or
 completed checkpoints skip; tests never download data automatically. GitHub
-Actions runs the offline CPU suite.
+Actions runs the offline CPU suite on Linux and Windows with lint, focused type
+checks and a 70% statement/branch coverage floor. A manual trusted-main GPU
+workflow is supplied for an operator-provisioned runner; hosted GPU CI is not
+claimed. Local CUDA tests skip explicitly when no CUDA device is available.
 
 ## Configuration and credentials
 
@@ -251,6 +297,9 @@ their ignored output directories.
 - [Presentation outline](docs/milestones/presentation.md)
 - [Verification record](docs/milestones/verification.md)
 - [Full application and UI verification](docs/ui-verification.md)
+- [Research v2 upgrade and weakness-response matrix](docs/research-upgrade.md)
+- [Model card](docs/model-card.md)
+- [Research-v2 measured results](docs/results/research-v2.md)
 - [Full modeling and downstream workflow](docs/milestones-2-5.md)
 - [Data-pipeline reference](docs/data-pipeline.md)
 - [Original technical Milestone 1 PRD](PRD.md)

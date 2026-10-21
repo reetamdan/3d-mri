@@ -1,0 +1,32 @@
+# Combined upgrade; ablate individual components before making causal claims.
+shape: [128, 128, 32]
+device: cuda
+threads: 4
+seed: 42
+epochs: 30
+batch_size: 2
+steps_per_epoch: 64
+learning_rate: 0.0003
+smoke_test: false
+initialize_codebook: true
+select_best: true
+mixed_precision: true
+gradient_accumulation: 1
+vq:
+  base: 32
+  latent_channels: 8
+  codes: 256
+  commitment: 0.25
+  ema_decay: 0.99
+  dead_code_threshold: 0.05
+gan_weight: 0
+unet_base: 32
+channel_mult: [1, 2, 4]
+attention: true
+attention_heads: 4
+diffusion_steps: 200
+prediction_type: v
+conditional: true
+label_dropout: 0.15
+ema_decay: 0.995
+validation_draws: 4

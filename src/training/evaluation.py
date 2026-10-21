@@ -8,6 +8,9 @@ from torch.nn import functional as F
 from src.utils.logging import write_json
 from .common import TrainingDataset, fingerprint
 from src.utils.integrity import generated_volume
+from .protocol import evaluation_context
+from .statistics import bootstrap_interval
+from .diagnostics import artifact_descriptors
 
 
 def multiscale_ssim(a, b, data_range=2., window=3, max_levels=5):
@@ -51,30 +54,78 @@ def continuity(volume):
     return [float(np.abs(np.diff(volume, axis=i)).mean()) for i in range(3)]
 
 
-def evaluate_generation(generated_dir, real_root, output, max_samples=16):
+def evaluate_generation(generated_dir, real_root, output, max_samples=16, training_root=None,
+                        real_split='train', seed=42):
     if max_samples < 2:
         raise ValueError('At least two samples must be requested')
     generated_dir = Path(generated_dir)
     manifest = json.loads((generated_dir/'manifest.json').read_text())
-    if manifest['dataset_fingerprint'] != fingerprint(real_root):
-        raise ValueError('Real dataset does not match generation provenance')
+    training_root = Path(training_root) if training_root else Path(real_root)
+    if manifest['dataset_fingerprint'] != fingerprint(training_root):
+        raise ValueError('Training reference does not match generation provenance')
+    context = evaluation_context(real_root, manifest, real_split, training_root)
     generated = [generated_volume(generated_dir, r, manifest['shape'])[0] for r in manifest['rows'][:max_samples]]
     if len(generated) < 2:
         raise ValueError('At least two generated volumes are required for diversity analysis')
-    real = TrainingDataset(real_root, 'train', manifest['shape'])
-    selected = [i for i, row in enumerate(real.rows) if row['scan_id'] in manifest['generator_train_ids']][:max_samples]
+    training = TrainingDataset(training_root, 'train', manifest['shape'])
+    train_indices = [i for i, row in enumerate(training.rows) if row['scan_id'] in manifest['generator_train_ids']]
+    if len(train_indices) != len(set(manifest['generator_train_ids'])):
+        raise ValueError('Generator training identities are absent from the training reference')
+    real = TrainingDataset(real_root, real_split, manifest['shape'])
+    candidates = list(range(len(real)))
+    conditions = {tuple(r['conditioning_labels']) for r in manifest['rows'][:max_samples]
+                  if r.get('conditioning_labels') is not None}
+    matching = [i for i, row in enumerate(real.rows) if row.get('labels') and tuple(json.loads(row['labels'])) in conditions]
+    class_matched = len(conditions) == 1 and bool(matching)
+    if class_matched:
+        candidates = matching
+    if real_split == 'train' and Path(real_root).resolve() == training_root.resolve():
+        candidates = [i for i in candidates if real.rows[i]['scan_id'] in manifest['generator_train_ids']]
+    selected = np.random.default_rng(seed).permutation(candidates)[:max_samples].tolist()
     originals = [real[i][0][0].numpy() for i in selected]
-    if not originals:
-        raise ValueError('No matching generator training scans for comparison')
+    if not originals or not train_indices:
+        raise ValueError('Real comparison and full training references must be nonempty')
+    # max_samples bounds expensive diversity diagnostics, never memorization search.
+    nearest = [dict(mse=float('inf'), scan_id=None) for _ in generated]
+    feature_nearest = [dict(mse=float('inf'), scan_id=None) for _ in generated]
+    def spatial_features(array):
+        tensor = torch.as_tensor(array.copy(), dtype=torch.float32)[None, None]
+        return F.adaptive_avg_pool3d(tensor, (4, 4, 4)).flatten().numpy()
+    generated_features = [spatial_features(v) for v in generated]
+    for index in train_indices:
+        reference = training[index][0][0].numpy()
+        reference_features = spatial_features(reference)
+        for i, candidate in enumerate(generated):
+            distance = float(np.mean(np.square(candidate-reference)))
+            if distance < nearest[i]['mse']:
+                nearest[i] = dict(mse=distance, scan_id=training.rows[index]['scan_id'])
+            feature_distance = float(np.mean(np.square(generated_features[i]-reference_features)))
+            if feature_distance < feature_nearest[i]['mse']:
+                feature_nearest[i] = dict(mse=feature_distance, scan_id=training.rows[index]['scan_id'])
     def diversity(volumes):
         values = [multiscale_ssim(a, b) for a, b in itertools.combinations(volumes, 2)]
         return {'mean_ms_ssim': float(np.mean([v[0] for v in values])) if values else None,
                 'pairs': len(values), 'levels': values[0][1] if values else None, 'window': 3}
+    real_diversity = diversity(originals)
     report = dict(smoke_test=manifest['smoke_test'], generated_count=len(generated), real_count=len(originals),
-        generated_diversity=diversity(generated), real_training_diversity=diversity(originals),
+        generated_diversity=diversity(generated), real_reference_diversity=real_diversity,
+        real_training_diversity=real_diversity,
+        legacy_field_note='real_training_diversity is a compatibility alias; consult real_comparison_split for the actual reference cohort',
         generated_adjacent_slice_mae=[continuity(v) for v in generated],
         real_adjacent_slice_mae=[continuity(v) for v in originals],
-        nearest_training_mse=[min(float(np.mean((a-b)**2)) for b in originals) for a in generated],
+        nearest_training_mse=[row['mse'] for row in nearest], nearest_training_neighbors=nearest,
+        memorization_reference_count=len(train_indices), memorization_search='Entire recorded generator training cohort',
+        nearest_training_spatial_features=feature_nearest,
+        spatial_feature_protocol='4x4x4 mean-pooled normalized intensity grid; structural descriptor, not a validated medical perceptual embedding',
+        real_comparison_split=real_split, evaluation_context=context,
+        diversity_selection=dict(seed=seed, class_matched=class_matched, matching_condition_support=len(matching),
+                                 available_reference_count=len(candidates)),
+        generated_artifact_descriptors=[artifact_descriptors(v) for v in generated],
+        generated_latent_quantization_mse=[r.get('quantization_mse') for r in manifest['rows'][:max_samples]],
+        sampler_clipping=[dict(mean=float(np.mean([s['clipped_fraction'] for s in r['sampling_diagnostics']])),
+                               maximum=max(s['clipped_fraction'] for s in r['sampling_diagnostics']))
+                          if r.get('sampling_diagnostics') else None for r in manifest['rows'][:max_samples]],
+        nearest_training_mse_interval=bootstrap_interval([r['mse'] for r in nearest], seed=seed),
         intensity_ranges=[[float(v.min()), float(v.max())] for v in generated],
         interpretation='Lower pairwise MS-SSIM can indicate diversity but also noise/artifacts. Adjacent-slice MAE is a descriptive check, not proof of anatomical consistency. Nearest-training MSE is only a memorization screen.',
         paired_ssim_psnr='Not reported for unrelated generated/real volumes; use VQ reconstruction evaluation for paired metrics',

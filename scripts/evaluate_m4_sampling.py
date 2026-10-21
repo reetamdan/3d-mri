@@ -11,6 +11,7 @@ from src.training.experiments import generate, train_diffusion
 from src.training.evaluation import evaluate_generation
 from src.training.evidence import export_evidence
 from src.utils.logging import write_json
+from src.utils.artifacts import resolve_reference
 
 
 def main():
@@ -20,6 +21,8 @@ def main():
     args = p.parse_args()
     root = Path(args.run)
     status = json.loads((root/'status.json').read_text())
+    for key in ('data_root', 'vq_checkpoint', 'diffusion_checkpoint'):
+        status[key] = str(resolve_reference(root, status[key]))
     if args.refine_epochs is not None and args.refine_epochs <= status['configs']['diffusion']['epochs']:
         raise ValueError('Refinement must increase total training epochs; no artifacts were moved')
     old_manifest = root/'generated/manifest.json'
