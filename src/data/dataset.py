@@ -14,7 +14,8 @@ class MRIDataset(Dataset):
         self.root = Path(run_dir).resolve()
         with (self.root / 'metadata.csv').open(newline='', encoding='utf-8') as f:
             rows = list(csv.DictReader(f))
-        seen, subjects = set(), {}
+        seen: set[str] = set()
+        subjects: dict[tuple[str, str], str] = {}
         for row in rows:
             if row['split'] not in ('train', 'validation', 'test') or row['scan_id'] in seen:
                 raise ValueError('Duplicate scan ID or invalid split in metadata')
@@ -27,7 +28,7 @@ class MRIDataset(Dataset):
                         raise ValueError('Patient/exam leakage across splits')
                     subjects[key] = row['split']
         self.rows = [r for r in rows if r['split'] == split]
-        self._verified = {}
+        self._verified: dict[Path, tuple[int, int]] = {}
 
     def __len__(self):
         return len(self.rows)

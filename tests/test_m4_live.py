@@ -1,19 +1,28 @@
 """Local real-checkpoint acceptance test. Never downloads or trains on import."""
 import json
+import shutil
 from pathlib import Path
 import numpy as np
 import pytest
 from streamlit.testing.v1 import AppTest
 from src.utils.integrity import generated_volume, sha256_file
+from src.utils.artifacts import resolve_reference
 
 ROOT = Path(__file__).resolve().parents[1]
 RUN = ROOT/'runs/M4-MRNET-20261021'
 pytestmark = pytest.mark.skipif(not (RUN/'evidence.json').exists(), reason='Complete scripts/run_m4.py for real-checkpoint acceptance')
 
 
-def test_real_trained_dashboard_inference_and_new_seed():
+def test_real_trained_dashboard_inference_and_new_seed(tmp_path):
+    run = tmp_path/'runs'/RUN.name
+    shutil.copytree(RUN, run, ignore=shutil.ignore_patterns('interactive', 'sampling-ablation', 'seed-repeat', 'evidence-assets'))
+    report_path = run/'reconstruction/report.json'
+    report = json.loads(report_path.read_text())
+    report['input_dataset'] = str(resolve_reference(RUN/'reconstruction', report['input_dataset']))
+    report_path.write_text(json.dumps(report))
     app = AppTest.from_file(str(ROOT/'app/streamlit_app.py')).run(timeout=60)
     app.sidebar.radio[0].set_value('Model Experiments').run(timeout=60)
+    next(t for t in app.text_input if t.label == 'Research runs directory').set_value(str(run.parent)).run(timeout=60)
     assert not app.exception
     experiment = next(s for s in app.selectbox if s.label == 'Experiment folder')
     experiment.select_index(next(i for i, option in enumerate(experiment.options) if option == RUN.name)).run(timeout=60)
@@ -26,8 +35,9 @@ def test_real_trained_dashboard_inference_and_new_seed():
     next(b for b in app.button if b.label == 'Generate a new volume').click().run(timeout=60)
     assert not app.exception
     live = app.session_state['live_generation']
-    assert Path(live['run']) == RUN
+    assert Path(live['run']) == run
     folder = Path(live['folder'])
+    assert folder.is_relative_to(run/'interactive')
     manifest = json.loads((folder/'manifest.json').read_text())
     row = manifest['rows'][0]
     assert row['seed'] == 2037 and not manifest['smoke_test']

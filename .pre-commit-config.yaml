@@ -6,9 +6,9 @@ repos:
         entry: python -m ruff check
         language: system
         types: [python]
-      - id: mypy-core
-        name: Type-check portable artifacts and statistics
+      - id: mypy-runtime
+        name: Type-check runtime packages
         entry: python -m mypy
         language: system
         pass_filenames: false
-        files: ^src/(utils/artifacts|training/statistics)\.py$
+        files: ^(src|app|mri3d|scripts)/.*\.py$

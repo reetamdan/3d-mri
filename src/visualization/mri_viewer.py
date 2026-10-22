@@ -3,6 +3,7 @@ import nibabel as nib
 import plotly.graph_objects as go
 
 PLANES = {'Axial': 2, 'Sagittal': 0, 'Coronal': 1}
+TENSOR_SECTIONS = {'Acquired-series slice': 2, 'Row cross-section': 0, 'Column cross-section': 1}
 
 
 def canonical_volume(volume, affine):
@@ -23,6 +24,18 @@ def slice_figure(volume, plane, index, spacing=(1, 1, 1), limits=None):
                       xaxis_title=labels[remaining[0]], yaxis_title=labels[remaining[1]])
     fig.update_yaxes(scaleanchor='x', scaleratio=1)
     return fig
+
+
+def tensor_slice_figure(volume, section, index, limits=(-1, 1)):
+    """Plot array axes without assigning patient-space orientation to MRNet data."""
+    axis = TENSOR_SECTIONS[section]
+    plane = next(name for name, value in PLANES.items() if value == axis)
+    figure = slice_figure(volume, plane, index, limits=limits)
+    axes = ['Tensor row', 'Tensor column', 'Acquired-series slice']
+    remaining = [i for i in range(3) if i != axis]
+    figure.update_layout(title=f'{section} · {index+1}/{volume.shape[axis]}',
+                         xaxis_title=axes[remaining[0]], yaxis_title=axes[remaining[1]])
+    return figure
 
 
 def aligned_original(volume, original_affine, processed_metadata, original_unit):

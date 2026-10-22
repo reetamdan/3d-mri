@@ -5,10 +5,45 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from src.data.mrnet import TASKS, PLANES, labels_for, load_series, prepare_mrnet
-from src.visualization.mri_viewer import slice_figure
+from src.visualization.mri_viewer import TENSOR_SECTIONS, tensor_slice_figure
 from src.visualization.plots import histogram
-from src.utils.integrity import confined_path, sha256_file, generated_volume
+from src.utils.integrity import confined_path, generated_volume
 from src.utils.artifacts import resolve_reference
+from app.artifact_cache import verified_hash, read_json, dataset_fingerprint, clear_verification_cache
+
+
+def interactive_manifest(folder, expected):
+    info = read_json(folder/'manifest.json')
+    if (not isinstance(info, dict) or info.get('smoke_test') is not False
+            or info.get('shape') != expected['shape']
+            or any(info.get(key) != expected[key] for key in ('vq_sha256', 'diffusion_sha256'))
+            or not isinstance(info.get('rows'), list) or len(info['rows']) != 1
+            or not isinstance(info['rows'][0], dict)):
+        raise ValueError('Interactive sample does not match the selected research model pair')
+    row = info['rows'][0]
+    if not row.get('sha256') or not confined_path(folder, row['file']).is_file():
+        raise ValueError('Interactive sample is incomplete')
+    return info
+
+
+def interactive_samples(run, expected):
+    valid, rejected = [], []
+    for folder in (run/'interactive').glob('sample-*'):
+        try:
+            if not folder.is_dir():
+                continue
+            interactive_manifest(folder, expected)
+            valid.append((folder.stat().st_mtime_ns, folder))
+        except (OSError, ValueError, KeyError, TypeError):
+            rejected.append(folder.name)
+    return [folder for _, folder in sorted(valid, reverse=True)], rejected
+
+
+def tensor_controls(array, scope, section_label, slice_label):
+    section = st.selectbox(section_label, list(TENSOR_SECTIONS), key=f'{scope}:section')
+    count = array.shape[TENSOR_SECTIONS[section]]
+    index = st.slider(slice_label, 0, count-1, count//2, key=f'{scope}:{section}:slice') if count > 1 else 0
+    return section, index
 
 
 def research_runs(root):
@@ -16,7 +51,7 @@ def research_runs(root):
     result = []
     for path in sorted(Path(root).glob('*/vq/run.json'), reverse=True):
         try:
-            info = json.loads(path.read_text())
+            info = read_json(path)
             if not isinstance(info, dict):
                 continue
             epochs = info.get('completed_epochs', 0)
@@ -27,7 +62,7 @@ def research_runs(root):
             checkpoint = confined_path(path.parent, checkpoint_file)
             if info.get('smoke_test', True):
                 continue
-            if checkpoint.is_file() and sha256_file(checkpoint) == info.get('checkpoint_sha256'):
+            if checkpoint.is_file() and verified_hash(checkpoint) == info.get('checkpoint_sha256'):
                 result.append(path.parent.parent)
         except (OSError, ValueError):
             continue
@@ -96,18 +131,21 @@ def experiments_page(root):
     st.markdown('**Pipeline:** MRI → VQ encoder/codebook → latent DDPM → VQ decoder → evaluation → augmentation comparison')
     st.caption('MRNet classification uses exam labels. Segmentation Dice requires separately supplied aligned masks.')
     runs_dir = Path(st.text_input('Research runs directory', str(root/'runs')))
+    if st.button('Reverify artifacts'):
+        clear_verification_cache()
+    st.caption('Display checks are cached by file signatures. Reverify artifacts forces fresh content checks.')
     folders = research_runs(runs_dir)
     if not folders:
         st.info('No verified research checkpoints are available. Prepare a real dataset with train/validation splits and train a model before inspecting results here.')
         st.code('python scripts/research.py train-vq --data <processed-dataset> --output runs/<experiment>/vq --config configs/models.yaml', language='text')
         return
     run = st.selectbox('Experiment folder', folders, format_func=lambda p: p.name)
-    vq_info = json.loads((run/'vq/run.json').read_text())
+    vq_info = read_json(run/'vq/run.json')
     vq_checkpoint = confined_path(run/'vq', vq_info.get('checkpoint_file', 'last.pt'))
     st.warning('Completed training and matching checksums do not establish anatomical validity. Independent evaluation and qualified anatomical review are still required.')
     evidence_path = run/'evidence.json'
     if evidence_path.exists():
-        evidence = json.loads(evidence_path.read_text())
+        evidence = read_json(evidence_path)
         st.caption(evidence['status'])
         cols = st.columns(4)
         cols[0].metric('Training / validation exams', f'{evidence["data"]["train_count"]} / {evidence["data"]["validation_count"]}')
@@ -117,7 +155,7 @@ def experiments_page(root):
         st.download_button('Download M3/M4 evidence', evidence_path.read_bytes(), 'evidence.json')
     summary_path = run/'summary.json'
     if summary_path.exists():
-        summary = json.loads(summary_path.read_text())
+        summary = read_json(summary_path)
         st.caption(summary.get('status', 'Research run'))
     cols = st.columns(2)
     for col, stage, y in zip(cols, ['vq', 'diffusion'], ['reconstruction_l1', 'noise_mse']):
@@ -125,18 +163,18 @@ def experiments_page(root):
             st.subheader(f'{stage.upper()} training')
             history = run/stage/'history.json'
             if history.exists():
-                frame = pd.DataFrame(json.loads(history.read_text()))
+                frame = pd.DataFrame(read_json(history))
                 st.line_chart(frame.set_index('epoch')[[y]])
                 st.dataframe(frame, hide_index=True)
             else:
                 st.info('No training history for this stage')
     manifest_path = run/'generated/manifest.json'
     if manifest_path.exists():
-        manifest = json.loads(manifest_path.read_text())
-        diffusion_info = json.loads((run/'diffusion/run.json').read_text())
+        manifest = read_json(manifest_path)
+        diffusion_info = read_json(run/'diffusion/run.json')
         diffusion_checkpoint = confined_path(run/'diffusion', diffusion_info.get('checkpoint_file', 'last.pt'))
-        if (manifest['vq_sha256'] != sha256_file(vq_checkpoint)
-                or manifest['diffusion_sha256'] != sha256_file(diffusion_checkpoint)):
+        if (manifest['vq_sha256'] != verified_hash(vq_checkpoint)
+                or manifest['diffusion_sha256'] != verified_hash(diffusion_checkpoint)):
             raise ValueError('Generated samples do not match the selected model checkpoints')
         st.subheader('Generated volumes')
         if manifest['smoke_test']:
@@ -145,17 +183,13 @@ def experiments_page(root):
         selected = st.selectbox('Generated sample', [r['file'] for r in manifest['rows']])
         sample_path = confined_path(run/'generated', selected)
         row = next(r for r in manifest['rows'] if r['file'] == selected)
-        if sha256_file(sample_path) != row.get('sha256'):
+        if verified_hash(sample_path) != row.get('sha256'):
             st.error('Generated tensor integrity cannot be verified. Regenerate this artifact.')
             return
         data = generated_volume(run/'generated', row, manifest['shape'])
         st.caption(f'Tensor shape: {data.shape}. Display uses tensor-axis slices; no patient-space affine is assigned.')
-        section = st.selectbox('Tensor slice plane', ['Acquired-series slice', 'Row cross-section', 'Column cross-section'])
-        plane, axis = {'Acquired-series slice': ('Axial', 2), 'Row cross-section': ('Sagittal', 0),
-                       'Column cross-section': ('Coronal', 1)}[section]
-        idx = st.slider('Generated slice', 0, data.shape[axis+1]-1, data.shape[axis+1]//2)
-        fig = slice_figure(data[0], plane, idx)
-        fig.update_layout(title=f'{section} · {idx+1}/{data.shape[axis+1]}', xaxis_title='Tensor axis', yaxis_title='Tensor axis')
+        section, idx = tensor_controls(data[0], f'{run}:{selected}', 'Tensor slice plane', 'Generated slice')
+        fig = tensor_slice_figure(data[0], section, idx)
         st.plotly_chart(fig, width='stretch')
         st.plotly_chart(histogram(data, 'Generated intensity distribution'), width='stretch')
         st.download_button('Download generated tensor', (run/'generated'/selected).read_bytes(), selected)
@@ -180,32 +214,59 @@ def experiments_page(root):
                     generate(vq_checkpoint, diffusion_checkpoint, target, count=1, seed=seed, labels=labels,
                              sampler=method, sampling_steps=sampling_steps, guidance_scale=guidance)
                 st.session_state['live_generation'] = dict(run=str(run), folder=str(target))
+                st.session_state[f'{run}:interactive_sample_picker'] = target.name
+
+            interactive_folders, rejected = interactive_samples(run, manifest)
+            if rejected:
+                st.warning(f'{len(rejected)} incomplete or incompatible interactive sample(s) excluded.')
             live = st.session_state.get('live_generation')
-            if live and live['run'] == str(run):
-                folder = Path(live['folder'])
-                record = json.loads((folder/'manifest.json').read_text())['rows'][0]
-                array = generated_volume(folder, record, manifest['shape'])[0]
-                figure = slice_figure(array, 'Axial', array.shape[2]//2, limits=(-1, 1))
-                figure.update_layout(title=f'New model sample · seed {record["seed"]}', xaxis_title='Tensor column', yaxis_title='Tensor row')
-                st.plotly_chart(figure, width='stretch')
-                st.success('New inference completed and checksum-verified.')
-                st.download_button('Download new generated volume', (folder/record['file']).read_bytes(), record['file'])
+            selected_folder = None
+            if live and live.get('run') == str(run) and Path(live.get('folder', '')).is_dir():
+                selected_folder = Path(live['folder'])
+            elif interactive_folders:
+                selected_folder = interactive_folders[0]
+
+            if interactive_folders:
+                st.divider()
+                st.subheader('Inspect generated interactive volumes')
+                folder_options = {f.name: f for f in interactive_folders}
+                default_idx = list(folder_options.values()).index(selected_folder) if selected_folder in folder_options.values() else 0
+                picker_key = f'{run}:interactive_sample_picker'
+                if st.session_state.get(picker_key) not in folder_options:
+                    st.session_state.pop(picker_key, None)
+                chosen_name = st.selectbox('Choose sample to inspect', list(folder_options.keys()), index=default_idx,
+                                           format_func=lambda n: f"{n} (latest)" if n == interactive_folders[0].name else n,
+                                           key=picker_key)
+                folder = folder_options[chosen_name]
+                try:
+                    sample = interactive_manifest(folder, manifest)
+                    record = sample['rows'][0]
+                    array = generated_volume(folder, record, sample['shape'])[0]
+                    section, idx = tensor_controls(array, str(folder), 'Slice orientation', 'Interactive slice')
+                    figure = tensor_slice_figure(array, section, idx)
+                    figure.update_layout(title=f'Sample seed {record["seed"]} · {figure.layout.title.text}')
+                    st.plotly_chart(figure, width='stretch')
+                    st.success(f'Sample {record["seed"]} verified (SHA-256: {record["sha256"][:12]}…)')
+                    st.download_button('Download this generated volume', confined_path(folder, record['file']).read_bytes(),
+                                       record['file'], key=f'{folder}:download')
+                except (OSError, ValueError, KeyError, TypeError):
+                    st.warning('This interactive sample failed integrity verification. Select another saved sample.')
     for title, relative in [('Paired reconstruction results', 'reconstruction/report.json'),
                              ('Generation diagnostics', 'generation-report.json'),
                              ('Augmentation comparison', 'downstream/report.json')]:
         path = run/relative
         with st.expander(title):
             if path.exists():
-                report = json.loads(path.read_text())
+                report = read_json(path)
                 if report.get('smoke_test', True):
                     st.info('Test-only or legacy report excluded from research results.')
                     continue
                 st.json(report, expanded=False)
                 st.download_button(f'Download {title.lower()}', path.read_bytes(), path.name, key=relative)
                 if relative == 'reconstruction/report.json':
-                    from src.training.common import TrainingDataset, fingerprint
+                    from src.training.common import TrainingDataset
                     input_dataset = resolve_reference(path.parent, report['input_dataset'])
-                    if report['checkpoint_sha256'] != sha256_file(vq_checkpoint) or report['dataset_fingerprint'] != fingerprint(input_dataset):
+                    if report['checkpoint_sha256'] != verified_hash(vq_checkpoint) or report['dataset_fingerprint'] != dataset_fingerprint(input_dataset):
                         raise ValueError('Reconstruction report does not match the current checkpoint or dataset; evaluate again')
                     shape = report['shape']
                     source = TrainingDataset(input_dataset, report['split'], shape)
@@ -214,13 +275,12 @@ def experiments_page(root):
                     original = source[index][0][0].numpy()
                     pair = next(r for r in report['rows'] if r['scan_id'] == scan_id)
                     restored = generated_volume(run/'reconstruction', pair, shape)[0]
-                    idx = st.slider('Paired tensor slice', 0, original.shape[2]-1, original.shape[2]//2)
+                    idx = st.slider('Paired tensor slice', 0, original.shape[2]-1, original.shape[2]//2,
+                                    key=f'{run}:{scan_id}:paired-slice')
                     for col, volume, label in zip(st.columns(2), [original, restored], ['Input tensor', 'VQ reconstruction']):
                         with col:
                             st.caption(label)
-                            fig = slice_figure(volume, 'Axial', idx, limits=(-1, 1))
-                            fig.update_layout(title=f'Acquired-series slice · {idx+1}/{original.shape[2]}',
-                                              xaxis_title='Tensor axis', yaxis_title='Tensor axis')
+                            fig = tensor_slice_figure(volume, 'Acquired-series slice', idx)
                             st.plotly_chart(fig, width='stretch')
                     if st.button('Reconstruct selected input now'):
                         import torch
@@ -233,8 +293,8 @@ def experiments_page(root):
                             with torch.no_grad():
                                 result = model(source[index][0][None].to(device))[0][0, 0].cpu().numpy()
                         st.write(reconstruction_metrics(original, result))
-                        figure = slice_figure(result, 'Axial', idx, limits=(-1, 1))
-                        figure.update_layout(title='Live trained VQ reconstruction', xaxis_title='Tensor column', yaxis_title='Tensor row')
+                        figure = tensor_slice_figure(result, 'Acquired-series slice', idx)
+                        figure.update_layout(title='Live trained VQ reconstruction')
                         st.plotly_chart(figure, width='stretch')
                         st.success('Live reconstruction inference completed.')
             else:
@@ -244,6 +304,6 @@ def experiments_page(root):
     tokenizer = run/'tokenizer.json'
     if tokenizer.exists():
         with st.expander('Tokenizer usage and quantization diagnostics'):
-            report = json.loads(tokenizer.read_text())
+            report = read_json(tokenizer)
             st.write({k: report[k] for k in ('samples', 'used_codes', 'dead_code_fraction', 'aggregate_perplexity', 'quantization_mse')})
             st.bar_chart(report['counts'])

@@ -14,8 +14,10 @@ from src.utils.seed import set_seed
 from src.utils.logging import write_json
 from src.utils.integrity import confined_path, sha256_file
 from .common import (TrainingDataset, device_for, fingerprint, save_checkpoint,
-                      read_checkpoint, fresh_output)
-from .protocol import cohort_records, evaluation_context, consume_protocol
+                      read_checkpoint, fresh_output, validate_output)
+from .protocol import evaluation_context, evaluation_attempt
+from src.utils.logging import atomic_json
+from src.utils.cohort import verify_cohort
 from .statistics import bootstrap_interval
 from .diagnostics import foreground_metrics
 from src.utils.artifacts import reference
@@ -53,7 +55,9 @@ def train_vq(root, output, c, resume=False):
         raise ValueError('Training split is empty')
     if not c.get('smoke_test', False) and not len(validation):
         raise ValueError('A research training run requires a nonempty validation split')
-    data_fingerprint = fingerprint(root)
+    cohort = verify_cohort(root)
+    data_fingerprint = cohort.fingerprint
+    records = cohort.records()
     out = fresh_output(output, resume)
     model = VQVAE3D(**c['vq']).to(device)
     if not resume and c.get('initialize_codebook', False):
@@ -65,7 +69,7 @@ def train_vq(root, output, c, resume=False):
     optimizer = torch.optim.Adam(model.parameters(), lr=c['learning_rate'])
     gan = c.get('gan_weight', 0) > 0
     discriminator = PatchDiscriminator3D(c['vq']['base']).to(device) if gan else None
-    dopt = torch.optim.Adam(discriminator.parameters(), lr=c['learning_rate']) if gan else None
+    dopt = torch.optim.Adam(discriminator.parameters(), lr=c['learning_rate']) if discriminator is not None else None
     accumulation = c.get('gradient_accumulation', 1)
     if gan and accumulation != 1:
         raise ValueError('VQ-GAN uses separate optimizers and currently requires gradient_accumulation=1')
@@ -81,7 +85,7 @@ def train_vq(root, output, c, resume=False):
         if ck['dataset_fingerprint'] != data_fingerprint or old != new:
             raise ValueError('Resume requires identical dataset/config except total epochs')
         model.load_state_dict(ck['model']); optimizer.load_state_dict(ck['optimizer'])
-        if gan:
+        if discriminator is not None and dopt is not None:
             discriminator.load_state_dict(ck['discriminator']); dopt.load_state_dict(ck['d_optimizer'])
         history, start = ck['history'], ck['epoch']
         if ck.get('scaler'):
@@ -105,7 +109,7 @@ def train_vq(root, output, c, resume=False):
                 reconstruction_loss = F.l1_loss(reconstruction, x)
                 loss = reconstruction_loss+quantization
                 dloss = torch.zeros((), device=device)
-                if gan and epoch >= c.get('gan_start_epoch', 1):
+                if discriminator is not None and dopt is not None and epoch >= c.get('gan_start_epoch', 1):
                     dopt.zero_grad(set_to_none=True)
                     dloss = (F.relu(1-discriminator(x)).mean()+F.relu(1+discriminator(reconstruction.detach())).mean())/2
                     if not torch.isfinite(dloss):
@@ -124,7 +128,7 @@ def train_vq(root, output, c, resume=False):
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1., error_if_nonfinite=True)
                 scaler.step(optimizer); scaler.update(); optimizer.zero_grad(set_to_none=True)
                 updates += 1
-            if gan:
+            if discriminator is not None:
                 discriminator.requires_grad_(True)
             values.append([loss.item(), reconstruction_loss.item(), quantization.item(), perplexity.item(), dloss.item()])
         model.eval()
@@ -143,12 +147,12 @@ def train_vq(root, output, c, resume=False):
         if scheduler:
             scheduler.step(record['validation_l1'] if validation_loss else record['reconstruction_l1'])
         save_checkpoint(out/'last.pt', dict(kind='vq', model=model.state_dict(), model_config=model.config,
-            optimizer=optimizer.state_dict(), discriminator=discriminator.state_dict() if gan else None,
-            d_optimizer=dopt.state_dict() if gan else None, **rng_state(),
+            optimizer=optimizer.state_dict(), discriminator=discriminator.state_dict() if discriminator is not None else None,
+            d_optimizer=dopt.state_dict() if dopt is not None else None, **rng_state(),
             scaler=scaler.state_dict(), scheduler=scheduler.state_dict() if scheduler else None,
             config=c, epoch=epoch+1, history=history, dataset_fingerprint=data_fingerprint,
             train_ids=train.ids, shape=c['shape'], smoke_test=c.get('smoke_test', False),
-            cohort_records=cohort_records(root)))
+            cohort_records=records))
         write_json(out/'history.json', history)
         if validation_loss and record['validation_l1'] <= min(r['validation_l1'] for r in history):
             save_checkpoint(out/'best.pt', read_checkpoint(out/'last.pt', 'vq'))
@@ -170,7 +174,8 @@ def train_vq(root, output, c, resume=False):
 def cache_latents(root, vq_path, output, device='auto'):
     device = device_for(device)
     model, ck = load_vq(vq_path, device)
-    if ck['dataset_fingerprint'] != fingerprint(root):
+    cohort = verify_cohort(root)
+    if ck['dataset_fingerprint'] != cohort.fingerprint:
         raise ValueError('VQ checkpoint was trained on a different processed dataset')
     out = fresh_output(output)
     rows, train_tensors = [], []
@@ -197,7 +202,7 @@ def cache_latents(root, vq_path, output, device='auto'):
         normalization_fit='train_only', latent_shape=list(latent.shape), vq_path=reference(vq_path, out),
         vq_sha256=checkpoint_hash(vq_path), shape=ck['shape'], train_ids=ck['train_ids'],
         smoke_test=ck['smoke_test'], dataset_fingerprint=ck['dataset_fingerprint'],
-        cohort_records=ck.get('cohort_records', cohort_records(root))))
+        cohort_records=cohort.records()))
     return str(out/'manifest.json')
 
 
@@ -280,7 +285,7 @@ def train_diffusion(latent_dir, output, c, resume=False):
                 ema.update(model)
         model.eval()
         validation_losses, ema_losses = [], []
-        strata = [[] for _ in range(4)]
+        strata: list[list[float]] = [[] for _ in range(4)]
         ema_model = ema.evaluation_model(model) if ema else None
         validation_rng = torch.Generator(device=device).manual_seed(c['seed']+100000)
         with torch.no_grad():
@@ -411,29 +416,34 @@ def evaluate_reconstruction(root, checkpoint, output, split='validation', device
     data = TrainingDataset(root, split, ck['shape'])
     if not len(data):
         raise ValueError(f'{split} is empty; no reconstruction results can be reported')
-    out = fresh_output(output)
-    rows = []
-    for i, row in enumerate(data.rows):
-        x, _ = data[i]
-        restored = model(x[None].to(device))[0][0].cpu().numpy()
-        target = confined_path(out, f'{row["scan_id"]}.npy')
-        np.save(target, restored)
-        metrics = reconstruction_metrics(x[0].numpy(), restored[0], 2.)
-        metrics = {k: v if np.isfinite(v) else None for k, v in metrics.items()}
-        rows.append(dict(scan_id=row['scan_id'], patient_id=row.get('patient_id') or row['scan_id'],
-            file=target.name, sha256=sha256_file(target), **metrics,
-            **foreground_metrics(x[0].numpy(), restored[0])))
-    report = dict(split=split, smoke_test=ck['smoke_test'], rows=rows,
-        input_dataset=reference(root, out), shape=ck['shape'], checkpoint_sha256=sha256_file(checkpoint),
-        dataset_fingerprint=fingerprint(root), evaluation_context=context,
-        confidence_interval_unit='patient' if all(r.get('patient_id') for r in data.rows) else 'exam; patient identities unavailable',
-        confidence_intervals={k: bootstrap_interval([r[k] for r in rows if r[k] is not None],
-            groups=[r['patient_id'] for r in rows if r[k] is not None])
-            for k in ('mse', 'mae', 'psnr', 'ssim') if any(r[k] is not None for r in rows)},
-        means={k: float(np.mean([r[k] for r in rows if r[k] is not None])) if any(r[k] is not None for r in rows) else None
-               for k in ('mse', 'mae', 'psnr', 'ssim')},
-        anatomical_preservation='Requires paired visual review; these metrics alone do not establish preservation')
-    if protocol:
-        report['frozen_protocol'] = consume_protocol(protocol, context, split, out)
-    write_json(out/'report.json', report)
+    out = validate_output(output)
+    checkpoint_sha256 = sha256_file(checkpoint)
+    with evaluation_attempt(protocol, context, split, out, checkpoint_sha256) as frozen:
+        fresh_output(out)
+        rows = []
+        for i, row in enumerate(data.rows):
+            x, _ = data[i]
+            restored = model(x[None].to(device))[0][0].cpu().numpy()
+            target = confined_path(out, f'{row["scan_id"]}.npy')
+            np.save(target, restored)
+            metrics = reconstruction_metrics(x[0].numpy(), restored[0], 2.)
+            metrics = {k: v if np.isfinite(v) else None for k, v in metrics.items()}
+            rows.append(dict(scan_id=row['scan_id'], patient_id=row.get('patient_id') or row['scan_id'],
+                file=target.name, sha256=sha256_file(target), **metrics,
+                **foreground_metrics(x[0].numpy(), restored[0])))
+        if fingerprint(root) != context['evaluation_dataset_fingerprint']:
+            raise ValueError('Evaluation dataset changed during inference')
+        report = dict(split=split, smoke_test=ck['smoke_test'], rows=rows,
+            input_dataset=reference(root, out), shape=ck['shape'], checkpoint_sha256=checkpoint_sha256,
+            dataset_fingerprint=context['evaluation_dataset_fingerprint'], evaluation_context=context,
+            confidence_interval_unit='patient' if all(r.get('patient_id') for r in data.rows) else 'exam; patient identities unavailable',
+            confidence_intervals={k: bootstrap_interval([r[k] for r in rows if r[k] is not None],
+                groups=[r['patient_id'] for r in rows if r[k] is not None])
+                for k in ('mse', 'mae', 'psnr', 'ssim') if any(r[k] is not None for r in rows)},
+            means={k: float(np.mean([r[k] for r in rows if r[k] is not None])) if any(r[k] is not None for r in rows) else None
+                   for k in ('mse', 'mae', 'psnr', 'ssim')},
+            anatomical_preservation='Requires paired visual review; these metrics alone do not establish preservation')
+        if frozen:
+            report['frozen_protocol'] = frozen
+        atomic_json(out/'report.json', report)
     return report

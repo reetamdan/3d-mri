@@ -13,7 +13,7 @@ if __name__ == '__main__' and not __package__:
 import numpy as np
 import torch
 from src.data.mrnet import prepare_mrnet
-from src.training.common import model_config, fingerprint, TrainingDataset, read_checkpoint
+from src.training.common import model_config, fingerprint, TrainingDataset, read_checkpoint, device_for
 from src.training.experiments import train_vq, cache_latents, train_diffusion, generate, evaluate_reconstruction, load_vq
 from src.training.evaluation import evaluate_generation
 from src.training.diagnostics import tokenizer_diagnostics
@@ -25,17 +25,24 @@ from src.utils.integrity import sha256_file
 
 
 def run(args):
+    if (min(args.vq_epochs, args.diffusion_epochs, args.steps) < 1 or args.count < 2 or not args.seeds
+            or len(set(args.seeds)) != len(args.seeds) or any(not 0 <= seed < 2**32 for seed in args.seeds)):
+        raise ValueError('Use positive training budgets, >=2 samples, and distinct valid seeds')
+    baseline = model_config(args.baseline_config, preset='research-baseline.yaml')
+    upgraded = model_config(args.upgraded_config, preset='research-v2.yaml')
+    if baseline['shape'] != upgraded['shape']:
+        raise ValueError('Study arms must use matching input geometry')
     root, data, source = Path(args.output).resolve(), Path(args.data).resolve(), Path(args.source).resolve()
     if root.exists() and not args.resume:
         raise ValueError('Study exists; resume explicitly or select a new output')
     root.mkdir(parents=True, exist_ok=True)
     if not data.exists():
         print('Preparing the frozen sagittal cohort', flush=True)
-        prepare_mrnet(source, data, 'sagittal', shape=(128, 128, 32))
+        prepare_mrnet(source, data, 'sagittal', shape=baseline['shape'])
     data_hash = fingerprint(data)
     plan = dict(schema_version=1, seeds=args.seeds, vq_epochs=args.vq_epochs, diffusion_epochs=args.diffusion_epochs,
         steps_per_epoch=args.steps, generated_count=args.count, dataset_fingerprint=data_hash,
-        baseline=model_config('configs/research-baseline.yaml'), upgraded=model_config('configs/research-v2.yaml'),
+        baseline=baseline, upgraded=upgraded,
         primary_endpoint='Validation reconstruction SSIM; paired exam bootstrap; not an independent test',
         study_type='Exploratory matched optimizer budgets; combined upgrade, not a factorial causal ablation',
         clinical_review='Pending; no segmentation masks or expert results are invented')
@@ -54,30 +61,39 @@ def run(args):
                 records.append(summary); continue
             started = time.perf_counter()
             config = deepcopy(plan[arm]); config.update(seed=seed, epochs=args.vq_epochs, steps_per_epoch=args.steps)
+            device = device_for(config['device'])
             print(f'\nSTUDY {arm} seed {seed}: VQ', flush=True)
             vq = train_vq(data, output/'vq', config, resume=(output/'vq/last.pt').exists())
             if not (output/'latents/manifest.json').exists():
-                cache_latents(data, vq, output/'latents', 'cuda')
+                cache_latents(data, vq, output/'latents', device)
+            else:
+                cached = json.loads((output/'latents/manifest.json').read_text())
+                if cached['vq_sha256'] != sha256_file(vq) or cached['dataset_fingerprint'] != data_hash:
+                    raise ValueError('Existing latent cache does not match the selected VQ model/cohort')
             config.update(epochs=args.diffusion_epochs, batch_size=4, learning_rate=.0002)
             print(f'STUDY {arm} seed {seed}: diffusion', flush=True)
             diffusion = train_diffusion(output/'latents', output/'diffusion', config,
                                         resume=(output/'diffusion/last.pt').exists())
             if (output/'reconstruction/report.json').exists():
                 reconstruction = json.loads((output/'reconstruction/report.json').read_text())
-                if reconstruction['checkpoint_sha256'] != sha256_file(vq):
+                if (reconstruction['checkpoint_sha256'] != sha256_file(vq)
+                        or reconstruction['dataset_fingerprint'] != data_hash):
                     raise ValueError('Existing reconstruction belongs to a different selected VQ model')
             else:
-                reconstruction = evaluate_reconstruction(data, vq, output/'reconstruction', device='cuda')
+                reconstruction = evaluate_reconstruction(data, vq, output/'reconstruction', device=device)
             if (output/'tokenizer.json').exists():
                 diagnostic = json.loads((output/'tokenizer.json').read_text())
             else:
-                model, _ = load_vq(vq, torch.device('cuda'))
-                diagnostic = tokenizer_diagnostics(model, TrainingDataset(data, 'train', config['shape']), 'cuda')
+                model, _ = load_vq(vq, device)
+                diagnostic = tokenizer_diagnostics(model, TrainingDataset(data, 'train', config['shape']), device)
                 write_json(output/'tokenizer.json', diagnostic)
-                del model; torch.cuda.empty_cache()
-            sampler = dict(sampler='ddim', sampling_steps=50, guidance_scale=1.5) if arm == 'upgraded' else {}
+                del model
+                if device.type == 'cuda':
+                    torch.cuda.empty_cache()
+            sampler = dict(sampler='ddim', sampling_steps=min(50, config['diffusion_steps']),
+                           guidance_scale=1.5 if config.get('label_dropout', 0) else 1.) if arm == 'upgraded' else {}
             if not (output/'generated/manifest.json').exists():
-                generate(vq, diffusion, output/'generated', count=args.count, seed=2026, labels=[1, 0, 0], device='cuda', **sampler)
+                generate(vq, diffusion, output/'generated', count=args.count, seed=2026, labels=[1, 0, 0], device=device, **sampler)
             generation = evaluate_generation(output/'generated', data, output/'generation-report.json',
                                               max_samples=args.count, real_split='validation')
             images = json.loads((output/'generated/manifest.json').read_text())
@@ -120,7 +136,8 @@ def run(args):
             for r in reports['upgraded']['rows']], seed=seed) for metric in ('mse', 'mae', 'psnr', 'ssim')}
     report = dict(plan=plan, completed_at=datetime.now(timezone.utc).isoformat(), records=records,
         matched_seed_comparison=comparisons, within_seed_paired_exam_intervals=paired,
-        environment=dict(python=platform.python_version(), torch=torch.__version__, gpu=torch.cuda.get_device_name(0)),
+        environment=dict(python=platform.python_version(), torch=torch.__version__,
+                         gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else None),
         independent_test=False, anatomical_review='Not performed',
         interpretation='Validation-selected exploratory study. Neither a favorable pixel metric nor software execution proves realistic anatomy.')
     write_json(root/'study.json', report)
@@ -132,6 +149,8 @@ def main():
     p.add_argument('--source', default='data/mrnet/MRNet-research-v2')
     p.add_argument('--data', default='data/processed/research-v2')
     p.add_argument('--output', default='runs/RESEARCH-V2')
+    p.add_argument('--baseline-config', help='Control YAML override; defaults to the bundled preset')
+    p.add_argument('--upgraded-config', help='Upgrade YAML override; defaults to the bundled preset')
     p.add_argument('--seeds', nargs='+', type=int, default=[42, 43, 44])
     p.add_argument('--vq-epochs', type=int, default=30)
     p.add_argument('--diffusion-epochs', type=int, default=100)

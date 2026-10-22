@@ -32,6 +32,7 @@ class SpatialAttention3D(nn.Module):
         self.qkv = nn.Conv3d(channels, channels * 3, 1)
         self.project = nn.Conv3d(channels, channels, 1)
         nn.init.zeros_(self.project.weight)
+        assert self.project.bias is not None
         nn.init.zeros_(self.project.bias)
 
     def forward(self, x):
@@ -75,6 +76,7 @@ class UNet3D(nn.Module):
             self.decoder_blocks = nn.ModuleList(TimeBlock(a+b, a, self.time_dim)
                                                 for a, b in reversed(list(zip(widths, widths[1:]))))
             self.output = nn.Conv3d(widths[0], channels, 3, padding=1)
+            assert self.output.bias is not None
             nn.init.zeros_(self.output.weight); nn.init.zeros_(self.output.bias)
 
     def forward(self, x, t, labels=None, condition_mask=None):
@@ -112,6 +114,13 @@ class UNet3D(nn.Module):
 
 
 class DDPM(nn.Module):
+    beta: torch.Tensor
+    alpha: torch.Tensor
+    cumulative: torch.Tensor
+    posterior_variance: torch.Tensor
+    posterior_clean_coefficient: torch.Tensor
+    posterior_noisy_coefficient: torch.Tensor
+
     def __init__(self, steps=1000, prediction_type='epsilon'):
         super().__init__()
         if steps < 2:

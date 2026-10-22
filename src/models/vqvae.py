@@ -16,6 +16,10 @@ class Residual3D(nn.Module):
 
 
 class VectorQuantizer(nn.Module):
+    ema_counts: torch.Tensor
+    ema_sums: torch.Tensor
+    last_indices: torch.Tensor
+
     def __init__(self, codes=128, channels=16, commitment=.25, ema_decay=None, dead_code_threshold=0.):
         super().__init__()
         if codes < 2 or channels < 1 or commitment < 0 or dead_code_threshold < 0 or (ema_decay is not None and not 0 < ema_decay < 1):
@@ -42,12 +46,12 @@ class VectorQuantizer(nn.Module):
     def forward(self, z):
         flat = z.movedim(1, -1).reshape(-1, z.shape[1])
         # Chunk distances to bound temporary allocations for 3D grids.
-        indices = []
+        chunks = []
         e = self.embedding.weight
         for chunk in flat.split(4096):
             distances = chunk.square().sum(1, keepdim=True) + e.square().sum(1) - 2*chunk@e.T
-            indices.append(distances.argmin(1))
-        indices = torch.cat(indices)
+            chunks.append(distances.argmin(1))
+        indices = torch.cat(chunks)
         self.last_indices = indices.detach()
         q = self.embedding(indices).view(z.shape[0], *z.shape[2:], z.shape[1]).movedim(-1, 1)
         loss = self.commitment*F.mse_loss(z, q.detach())

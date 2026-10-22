@@ -1,11 +1,10 @@
-import csv
-import hashlib
 import json
+from collections.abc import Iterator
 from pathlib import Path
 import torch
 from torch.nn import functional as F
 from src.data.dataset import MRIDataset
-from src.utils.integrity import confined_path, sha256_file
+from src.utils.cohort import verify_cohort
 
 
 def device_for(name='auto'):
@@ -41,19 +40,13 @@ class TrainingDataset(MRIDataset):
             raise ValueError('Expected three binary MRNet labels')
         return x, torch.tensor(labels, dtype=torch.float32)
 
+    def __iter__(self) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
+        for index in range(len(self)):
+            yield self[index]
+
 
 def fingerprint(root):
-    metadata = Path(root)/'metadata.csv'
-    digest = hashlib.sha256(metadata.read_bytes())
-    with metadata.open(newline='', encoding='utf-8') as f:
-        for row in csv.DictReader(f):
-            path = confined_path(root, row['output_file'])
-            actual = sha256_file(path)
-            if row.get('output_sha256') and actual != row['output_sha256']:
-                raise ValueError('Processed tensor checksum mismatch; reprocess the source dataset')
-            digest.update(row['output_file'].encode())
-            digest.update(actual.encode())
-    return digest.hexdigest()
+    return verify_cohort(root).fingerprint
 
 
 def save_checkpoint(path, payload):
@@ -70,20 +63,23 @@ def read_checkpoint(path, kind=None):
     return checkpoint
 
 
-def fresh_output(path, resume=False):
+def validate_output(path, resume=False):
     path = Path(path)
-    if path.exists() and any(path.iterdir()) and not resume:
+    if path.exists() and (not path.is_dir() or (any(path.iterdir()) and not resume)):
         raise ValueError('Output exists; choose a new run directory or resume explicitly')
+    return path
+
+
+def fresh_output(path, resume=False):
+    path = validate_output(path, resume)
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 
-def model_config(path):
-    import yaml
+def model_config(path=None, *, preset='models.yaml'):
+    from mri3d.configuration import read_configuration
     import math
-    c = yaml.safe_load(Path(path).read_text())
-    if not isinstance(c, dict):
-        raise ValueError('Model configuration must be a YAML mapping')
+    c = read_configuration(path, preset=preset)
     shape = c.get('shape')
     if (not isinstance(shape, (list, tuple)) or len(shape) != 3
             or any(not isinstance(s, int) or isinstance(s, bool) or s < 8 or s % 8 for s in shape)):

@@ -17,6 +17,7 @@ import time
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 import zipfile
+from typing import Any
 
 import numpy as np
 
@@ -57,7 +58,7 @@ def stratified_ids(labels, count, seed):
     """Proportional joint-label strata; selection never crosses official splits."""
     if not 1 <= count <= len(labels):
         raise ValueError(f'Subset count must be between 1 and {len(labels)}')
-    groups = {}
+    groups: dict[tuple[int, ...], list[str]] = {}
     for exam, values in sorted(labels.items()):
         groups.setdefault(tuple(values), []).append(exam)
     keys = sorted(groups)
@@ -110,7 +111,7 @@ def download_subset(output, train_count=96, validation_count=24, seed=42,
         for i, task in enumerate(TASKS):
             (output / f'{split}-{task}.csv').write_text(
                 ''.join(f'{exam},{labels[split][exam][i]}\n' for exam in selected[split]), encoding='utf-8')
-    manifest = dict(selection=spec, complete=False,
+    manifest: dict[str, Any] = dict(selection=spec, complete=False,
         source_url=f'https://www.kaggle.com/datasets/{MIRROR}',
         upstream_url='https://stanfordmlgroup.github.io/competitions/mrnet/',
         mirror_license='Unknown (as reported by Kaggle); no new license is asserted',

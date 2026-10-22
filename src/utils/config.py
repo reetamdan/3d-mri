@@ -2,7 +2,7 @@
 from copy import deepcopy
 from pathlib import Path
 import math
-import yaml
+from mri3d.configuration import read_configuration
 
 
 def validate_config(config: dict) -> dict:
@@ -41,12 +41,11 @@ def validate_config(config: dict) -> dict:
     return c
 
 
-def load_config(path: str | Path = 'configs/config.yaml') -> dict:
-    path = Path(path).resolve()
-    with path.open(encoding='utf-8') as f:
-        c = validate_config(yaml.safe_load(f))
+def load_config(path: str | Path | None = None) -> dict:
+    base = Path(path).resolve().parent if path else Path.cwd()/'configs'
+    c = validate_config(read_configuration(path, preset='config.yaml'))
     for key in ('raw_dir', 'processed_dir', 'metadata_dir', 'manifest'):
         if c['dataset'].get(key):
-            c['dataset'][key] = str((path.parent / c['dataset'][key]).resolve())
-    c['logs_dir'] = str((path.parent / c.get('logs_dir', '../logs')).resolve())
+            c['dataset'][key] = str((base / c['dataset'][key]).resolve())
+    c['logs_dir'] = str((base / c.get('logs_dir', '../logs')).resolve())
     return c

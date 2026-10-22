@@ -70,9 +70,9 @@ def prepare_mrnet(root, output, plane='sagittal', shape=(128, 128, 32), limit=No
                 series = load_series(path)
                 # [slices, rows, columns] -> [1, rows, columns, slices]
                 array = series.transpose(1, 2, 0)
-                tensor = torch.from_numpy(array.copy())[None, None]
-                tensor = F.interpolate(tensor, size=shape, mode='trilinear', align_corners=False)[0, 0].numpy()
-                tensor = normalize(tensor)[None]
+                batch = torch.from_numpy(array.copy())[None, None]
+                resized = F.interpolate(batch, size=shape, mode='trilinear', align_corners=False)[0, 0].numpy()
+                tensor = normalize(resized)[None]
                 validate_volume(tensor[0])
                 relative = f'{split}/{scan_id}.npy'
                 np.save(output/relative, tensor, allow_pickle=False)

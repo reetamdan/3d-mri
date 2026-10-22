@@ -119,7 +119,7 @@ def test_relative_artifact_reference_survives_a_moved_project(tmp_path):
     assert resolve_reference(moved/'runs/example', relative) == moved/'data'
 
 
-def test_external_reconstruction_executes_a_frozen_protocol_end_to_end(tmp_path):
+def test_external_reconstruction_executes_a_frozen_protocol_end_to_end(tmp_path, monkeypatch):
     from src.models.vqvae import VQVAE3D
     from src.training.common import save_checkpoint
     from src.training.experiments import evaluate_reconstruction
@@ -140,6 +140,105 @@ def test_external_reconstruction_executes_a_frozen_protocol_end_to_end(tmp_path)
     assert report['evaluation_context']['training_dataset_fingerprint'] == fingerprint(train)
     assert report['frozen_protocol']['independent_patient_test_eligible']
     assert resolve_reference(output, report['input_dataset']) == external
+    receipt = json.loads(plan.with_suffix('.evaluation.json').read_text())
+    assert receipt['status'] == 'completed'
+    assert receipt['report_sha256'] == sha256_file(output/'report.json')
+    assert receipt['checkpoint_sha256'] == sha256_file(checkpoint)
+    def unexpected_inference(*args, **kwargs):
+        pytest.fail('Rejected protocol reached model inference')
+    monkeypatch.setattr(VQVAE3D, 'forward', unexpected_inference)
     with pytest.raises(FileExistsError):
         evaluate_reconstruction(external, checkpoint, tmp_path/'repeat-evaluation', split='test', device='cpu',
-                                training_root=train, protocol=plan)
+                                 training_root=train, protocol=plan)
+    assert not (tmp_path/'repeat-evaluation').exists()
+    with pytest.raises(ValueError, match='frozen protocol'):
+        evaluate_reconstruction(external, checkpoint, tmp_path/'wrong-split', split='validation', device='cpu',
+                                 training_root=train, protocol=plan)
+    assert not (tmp_path/'wrong-split').exists()
+
+
+def test_content_overlap_is_detected_without_declared_hashes(tmp_path):
+    train, external = tmp_path/'train', tmp_path/'external'
+    training_rows = processed(train, 'training')
+    rows = processed(external, 'external')
+    (external/'3.npy').write_bytes((train/'0.npy').read_bytes())
+    rows[3]['output_sha256'] = rows[3]['source_sha256'] = ''
+    with (external/'metadata.csv').open('w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0])); writer.writeheader(); writer.writerows(rows)
+    before = (external/'metadata.csv').read_bytes()
+    checkpoint = dict(dataset_fingerprint=fingerprint(train), cohort_records=cohort_records(train))
+    for training_reference in (None, train):
+        with pytest.raises(ValueError, match='overlaps'):
+            evaluation_context(external, checkpoint, 'test', training_reference)
+    with pytest.raises(ValueError, match='overlapping'):
+        freeze_protocol(train, external, tmp_path/'invalid-plan.json')
+    assert cohort_records(external)[3]['output_sha256'] == training_rows[0]['output_sha256']
+    assert (external/'metadata.csv').read_bytes() == before
+
+
+def test_incomplete_embedded_hashes_require_verified_training_root(tmp_path):
+    train, external = tmp_path/'train', tmp_path/'external'
+    processed(train, 'training'); processed(external, 'external')
+    records = cohort_records(train)
+    records[0]['output_sha256'] = ''
+    checkpoint = dict(dataset_fingerprint=fingerprint(train), cohort_records=records)
+    with pytest.raises(ValueError, match='training_root'):
+        evaluation_context(external, checkpoint, 'test')
+    result = evaluation_context(external, checkpoint, 'test', train)
+    assert result['overlap_audit']['tensor_hashes_complete']
+    assert result['independent_patient_test_eligible']
+
+
+def test_verified_snapshot_preserves_legacy_fingerprint_and_checks_declared_hashes(tmp_path):
+    import hashlib
+    from src.utils.cohort import verify_cohort
+    root = tmp_path/'data'; rows = processed(root, 'cohort')
+    digest = hashlib.sha256((root/'metadata.csv').read_bytes())
+    for row in rows:
+        digest.update(row['output_file'].encode()); digest.update(row['output_sha256'].encode())
+    assert verify_cohort(root).fingerprint == digest.hexdigest()
+    (root/'0.npy').write_bytes((root/'1.npy').read_bytes())
+    with pytest.raises(ValueError, match='checksum mismatch'):
+        cohort_records(root)
+
+
+def test_protocol_reservation_is_exclusive_and_retains_failures(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from src.training.protocol import reserve_protocol, evaluation_attempt
+    train, external = tmp_path/'train', tmp_path/'external'
+    processed(train, 'training'); processed(external, 'external')
+    plan = tmp_path/'plan.json'; freeze_protocol(train, external, plan)
+    context = evaluation_context(external, dict(dataset_fingerprint=fingerprint(train)), 'test', train)
+    def reserve():
+        try:
+            return reserve_protocol(plan, context, 'test', tmp_path/'results', 'checkpoint-hash')
+        except FileExistsError:
+            return None
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: reserve(), range(2)))
+    assert sum(r is not None for r in results) == 1
+    assert json.loads(plan.with_suffix('.evaluation.json').read_text())['status'] == 'running'
+    failed = tmp_path/'failed.json'; freeze_protocol(train, external, failed)
+    with pytest.raises(RuntimeError, match='injected'):
+        with evaluation_attempt(failed, context, 'test', tmp_path/'failed-output', 'checkpoint-hash'):
+            raise RuntimeError('injected inference failure')
+    receipt = json.loads(failed.with_suffix('.evaluation.json').read_text())
+    assert receipt['status'] == 'failed' and receipt['error_type'] == 'RuntimeError'
+    with pytest.raises(FileExistsError):
+        reserve_protocol(failed, context, 'test', tmp_path/'retry')
+
+
+def test_report_failure_is_recorded_and_legacy_receipts_block_reuse(tmp_path, monkeypatch):
+    from src.training.protocol import evaluation_attempt, reserve_protocol
+    train, external = tmp_path/'train', tmp_path/'external'
+    processed(train, 'training'); processed(external, 'external')
+    plan = tmp_path/'plan.json'; freeze_protocol(train, external, plan)
+    context = evaluation_context(external, dict(dataset_fingerprint=fingerprint(train)), 'test', train)
+    with pytest.raises(FileNotFoundError):
+        with evaluation_attempt(plan, context, 'test', tmp_path/'absent-report', 'checkpoint-hash'):
+            pass
+    assert json.loads(plan.with_suffix('.evaluation.json').read_text())['status'] == 'failed'
+    legacy = tmp_path/'legacy.json'; freeze_protocol(train, external, legacy)
+    legacy.with_suffix('.evaluation.json').write_text('{"output": "legacy-completed"}')
+    with pytest.raises(FileExistsError):
+        reserve_protocol(legacy, context, 'test', tmp_path/'legacy-retry')

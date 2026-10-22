@@ -20,7 +20,8 @@ from src.utils.artifacts import reference, resolve_reference
 
 def run(args):
     source, data, output = map(Path, (args.source, args.data, args.output))
-    vq_config, diffusion_config = model_config(args.vq_config), model_config(args.diffusion_config)
+    vq_config = model_config(args.vq_config, preset='m4-vq.yaml')
+    diffusion_config = model_config(args.diffusion_config, preset='m4-diffusion.yaml')
     if vq_config['smoke_test'] or diffusion_config['smoke_test']:
         raise ValueError('The M4 runner requires real training configurations')
     if vq_config['shape'] != diffusion_config['shape']:
@@ -106,8 +107,8 @@ def main():
     p.add_argument('--source', default='data/mrnet/MRNet-v1.0')
     p.add_argument('--data', default='data/processed/mrnet-m4-20261021')
     p.add_argument('--output', default='runs/M4-MRNET-20261021')
-    p.add_argument('--vq-config', default='configs/m4-vq.yaml')
-    p.add_argument('--diffusion-config', default='configs/m4-diffusion.yaml')
+    p.add_argument('--vq-config', help='VQ YAML override; defaults to the bundled preset')
+    p.add_argument('--diffusion-config', help='Diffusion YAML override; defaults to the bundled preset')
     p.add_argument('--count', type=int, default=8)
     p.add_argument('--resume', action='store_true')
     args = p.parse_args()

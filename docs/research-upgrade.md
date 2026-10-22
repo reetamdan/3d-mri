@@ -24,7 +24,7 @@ and its recorded results remain reproducible historical experiments.
 | Training checkpoints unnecessarily large for inference | Compact model-pair export removes optimizer/history/RNG state and records original hashes | Exported samples are regression-tested against the source EMA pair; compact exports cannot resume training |
 | Moving a run broke paths | Owner-relative references and `mri3d relocate`; checkpoint hashes preserved | Regression tests move artifact trees and resolve legacy Windows references |
 | No installable project | `pyproject.toml`, editable install, `mri3d`, `python -m mri3d`, `mri3d-study` | CLI verified outside the repository directory |
-| CI covered only offline execution | Ruff, focused mypy, branch coverage gate, Linux/Windows CPU matrix; manual trusted-main GPU workflow | Manual GPU workflow requires an operator-provided runner and is not claimed as hosted GPU CI |
+| CI covered only offline execution | Ruff, runtime-package mypy, branch coverage including scripts, Linux/Windows CPU matrix and isolated wheel-install tests; manual trusted-main GPU workflow | Manual GPU workflow requires an operator-provided runner |
 | Documentation drift | Updated MRNet integration status and research guide; historical results labeled separately | Official Redivis delivery still needs separate archive-format integration |
 
 ## Install / upgrade after pulling
@@ -107,9 +107,18 @@ mri3d evaluate-generation --data <new-evaluation-run> --training-data <training-
 The audit checks patient/exam/scan identity plus source/tensor content against
 training and model-selection data. Missing patient IDs are reported explicitly;
 disjoint exam IDs alone are insufficient to certify independent patients.
+Tensor hashes are derived from the actual processed files even when metadata
+checksums are blank; declared checksums must match. Legacy embedded cohort records
+with incomplete tensor hashes require the matching `--training-data` directory.
 Freezing records the plan and timestamp; it cannot prove that an operator never
-previously inspected the images. Evaluation receipts prevent silent reuse of a
-completed test protocol through this interface.
+previously inspected the images.
+
+Evaluation validates and exclusively reserves the protocol **before inference or
+output creation**. Its receipt records the checkpoint hash and transitions from
+`running` to `completed` only after the report is saved; failures become `failed`.
+Any existing receipt, including legacy completed receipts and interrupted/failed
+attempts, blocks automatic reuse. Inspect a failed attempt and use a new explicitly
+named protocol/output for a new attempt; retain the previous receipt as its record.
 
 ## Feature metrics and human review
 
@@ -132,13 +141,18 @@ No radiologist scores or segmentation masks are generated as stand-ins for real 
 
 ## Quality checks
 
-Local publication verification: **124 tests passed** (no skips here), **87.82%**
-combined statement/branch coverage, Ruff and focused mypy passed, and `pip check`
-reported no broken requirements. Actual CUDA tests exercised the upgraded path.
-Chrome passed the existing **20 workflow scenarios** and two additional checks
-for the new models, relative artifacts, tokenizer statistics and live EMA/CFG/DDIM
-sampling. The independent-cohort path was exercised with explicitly artificial
-software fixtures, not represented as a new real-world test result.
+Current engineering verification: **144 tests passed** (no skips locally),
+**72.60%** automated statement/branch coverage including `scripts/` and the new
+output auditor, Ruff and mypy passed across all **64 runtime source files**, and `pip check` reported no broken
+requirements. Actual CUDA and temporary-copy live-checkpoint tests passed.
+An empty-data workspace with CUDA hidden passed 138 tests with six expected skips
+and 70.52% coverage. The [output assessment](results/output-verification.md) records
+independently recomputed M4 metrics and actual internal-validation utility results.
+An isolated built-wheel installation loaded every public preset and completed a
+tiny CPU training/evaluation workflow outside the checkout. See the
+[engineering record](engineering-verification.md) for exact scope. The original
+124-test/87.82% publication record used the narrower coverage denominator;
+historical browser checks are described in [the UI record](ui-verification.md).
 
 ```bash
 python -m ruff check .
@@ -146,12 +160,19 @@ python -m mypy
 python -m pytest -q --cov --cov-report=term-missing
 ```
 
-Ruff covers source/scripts/tests. Type checking initially targets the artifact and
-statistical helpers; this is not full-project static typing. Coverage measures
-statements and branches and enforces a 70% floor. Numerical fixtures exercise
+Ruff covers source/scripts/tests. Mypy checks `src`, `app`, `mri3d` and `scripts`
+with untyped-function body checking; it does not enable strict annotation coverage.
+Coverage measures statements and branches over those same runtime packages and
+enforces a 70% floor. Numerical fixtures exercise
 resume equivalence, metric references, overlap, corruption, geometry invariants,
 guidance, sampling and EMA. GPU tests also exercise the new mixed-precision path
 when CUDA is actually available; CPU CI skips hardware-only cases explicitly.
+
+The model dashboard verifies unchanged files through a signature-keyed display
+cache. **Reverify artifacts** clears those checks and forces fresh content reads.
+Research evaluation always performs uncached content verification. Generated MRNet
+views use acquired-series/row/column axes, and persistent interactive samples must
+match their selected model pair, shape, and tensor checksum.
 
 ## What is intentionally not claimed as solved
 

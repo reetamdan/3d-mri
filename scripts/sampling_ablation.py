@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import sys
 import time
+from typing import Any
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -29,7 +30,7 @@ def main():
     vq_info = json.loads((run/'vq/run.json').read_text())
     diffusion_info = json.loads((run/'diffusion/run.json').read_text())
     vq, diffusion = run/'vq'/vq_info['checkpoint_file'], run/'diffusion'/diffusion_info['checkpoint_file']
-    arms = {
+    arms: dict[str, dict[str, Any]] = {
         'raw-ddpm': dict(weights='raw'),
         'ema-ddpm': dict(weights='ema'),
         'ema-ddim-50': dict(weights='ema', sampler='ddim', sampling_steps=50),

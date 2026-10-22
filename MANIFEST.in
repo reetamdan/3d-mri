@@ -1,0 +1,9 @@
+include configs/config.yaml
+include configs/models.yaml
+include configs/m4-vq.yaml
+include configs/m4-diffusion.yaml
+include configs/research-baseline.yaml
+include configs/research-v2.yaml
+include configs/smoke-models.yaml
+include configs/prd-example.yaml
+include configs/real-scans.yaml

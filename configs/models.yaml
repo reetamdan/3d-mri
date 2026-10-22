@@ -2,6 +2,7 @@
 shape: [128, 128, 32]
 device: auto
 threads: 4
+threads: 4
 seed: 42
 epochs: 100
 batch_size: 1

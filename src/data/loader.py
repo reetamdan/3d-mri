@@ -12,6 +12,8 @@ def load_mri(path: str | Path, max_voxels: int = 67108864) -> tuple[np.ndarray, 
         raise VolumeValidationError('format', 'Only NIfTI .nii and .nii.gz are supported')
     try:
         img = nib.load(str(path))
+        if not isinstance(img, (nib.Nifti1Image, nib.Nifti2Image)):
+            raise VolumeValidationError('format', 'Expected a NIfTI image')
         if len(img.shape) != 3:
             raise VolumeValidationError('dimensions', 'Expected exactly three dimensions')
         if np.prod(img.shape, dtype=np.int64) > max_voxels:

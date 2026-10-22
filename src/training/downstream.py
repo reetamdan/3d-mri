@@ -1,6 +1,7 @@
 """Fixed-update, matched-seed MRNet classification augmentation experiment."""
 import json
 from pathlib import Path
+from typing import Any
 import numpy as np
 from scipy.stats import rankdata
 import torch
@@ -103,15 +104,15 @@ def compare_augmentation(root, generated_dir, output, shape=(128, 128, 32), limi
                 for x, y in valid:
                     truth.append(y.numpy())
                     probabilities.append(model(x[None].to(device)).sigmoid()[0].cpu().numpy())
-            truth, probabilities = np.array(truth), np.array(probabilities)
-            metrics = classification_metrics(truth, probabilities)
-            intervals = classification_intervals(truth, probabilities,
+            truth_array, probability_array = np.array(truth), np.array(probabilities)
+            metrics = classification_metrics(truth_array, probability_array)
+            intervals = classification_intervals(truth_array, probability_array,
                 groups=[r.get('patient_id') or r['scan_id'] for r in valid.rows],
                 seed=seed, resamples=bootstrap_samples)
             torch.save(dict(model=model.state_dict(), seed=seed, arm=arm, train_ids=real.ids), out/f'{arm}-{seed}.pt')
             results.append(dict(seed=seed, arm=arm, training_loss=losses, metrics=metrics,
                                 confidence_intervals=intervals))
-    comparison = {}
+    comparison: dict[str, dict[str, Any]] = {}
     for task in ('abnormal', 'acl', 'meniscus'):
         comparison[task] = {}
         for metric in ('auc', 'accuracy', 'brier'):
@@ -144,7 +145,7 @@ def classification_intervals(labels, probabilities, groups=None, seed=42, resamp
     if identities.shape != (len(labels),):
         raise ValueError('One cluster identity is required per exam')
     clusters = [np.flatnonzero(identities == name) for name in np.unique(identities)]
-    values = {task: {metric: [] for metric in ('auc', 'accuracy', 'brier', 'sensitivity', 'specificity')}
+    values: dict[str, dict[str, list[float]]] = {task: {metric: [] for metric in ('auc', 'accuracy', 'brier', 'sensitivity', 'specificity')}
               for task in ('abnormal', 'acl', 'meniscus')}
     rng = np.random.default_rng(seed)
     for _ in range(resamples):

@@ -18,8 +18,9 @@ from src.visualization.mri_viewer import PLANES, canonical_volume, slice_figure,
 from src.visualization.plots import histogram, intensity_stats
 from src.visualization.volume_viewer import volume_figure
 from src.metrics import downsample_reconstruction_baseline
+from mri3d.configuration import workspace_root
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = workspace_root()
 st.set_page_config(page_title='3D MRI Research', page_icon='◈', layout='wide')
 st.markdown('''<style>
 .block-container {padding-top:4.5rem; max-width:1500px}
@@ -35,7 +36,9 @@ h1 {font-weight:650; letter-spacing:-1.2px}
 st.sidebar.markdown('## ◈ MRI RESEARCH')
 st.sidebar.caption('MEDICAL DIFFUSION / DATA · MODELS · EVALUATION')
 page = st.sidebar.radio('Workspace', ['Dataset Overview', 'MRI Viewer', 'Preprocessing', 'Intensity Analysis', 'Dataset Quality', 'Export', 'MRNet Dataset', 'Model Experiments'])
-config_path = st.sidebar.text_input('Configuration file', str(ROOT / 'configs/config.yaml'))
+config_path = st.sidebar.text_input('Configuration file', str(ROOT/'configs/config.yaml')
+                                  if (ROOT/'configs/config.yaml').is_file() else '',
+                                  help='Leave blank for the bundled preprocessing preset in the current workspace.')
 try:
     config = load_config(config_path)
 except Exception as exc:
@@ -55,8 +58,8 @@ if st.sidebar.button('↻ Index & validate dataset', type='primary', width='stre
         st.session_state.pop(key, None)
     try:
         with st.spinner('Reading and validating scans…'):
-            records, errors, report = inspect_dataset(config)
-        st.session_state.update(records=records, errors=errors, report=report)
+            records, errors, indexed_report = inspect_dataset(config)
+        st.session_state.update(records=records, errors=errors, report=indexed_report)
         st.session_state.pop('preview', None)
         st.session_state.pop('run', None)
     except Exception as exc:

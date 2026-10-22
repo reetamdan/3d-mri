@@ -7,11 +7,15 @@ if __name__ == '__main__' and not __package__:
     # Compatibility for direct script invocation; the installed CLI uses packages.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.training.common import model_config
+from mri3d.configuration import read_configuration
+from mri3d.presets import PRESETS
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
+    config = sub.add_parser('show-config', help='Print an installed configuration preset as JSON')
+    config.add_argument('--preset', choices=PRESETS, default='models.yaml')
     mr = sub.add_parser('prepare-mrnet')
     mr.add_argument('--root', required=True); mr.add_argument('--output', required=True)
     mr.add_argument('--plane', choices=['axial', 'sagittal', 'coronal'], default='sagittal')
@@ -19,7 +23,8 @@ def main():
     for stage in ('train-vq', 'train-diffusion'):
         p = sub.add_parser(stage)
         p.add_argument('--data', required=True); p.add_argument('--output', required=True)
-        p.add_argument('--config', default='configs/models.yaml'); p.add_argument('--resume', action='store_true')
+        p.add_argument('--config', help='YAML file override; defaults to the bundled models.yaml preset')
+        p.add_argument('--resume', action='store_true')
     p = sub.add_parser('cache-latents')
     p.add_argument('--data', required=True); p.add_argument('--vq', required=True); p.add_argument('--output', required=True)
     p.add_argument('--device', default='auto')
@@ -67,7 +72,9 @@ def main():
     p.add_argument('--evaluation-data'); p.add_argument('--evaluation-split', choices=['validation', 'test'], default='validation')
     args = parser.parse_args()
     from src.training import experiments as e
-    if args.command == 'prepare-mrnet':
+    if args.command == 'show-config':
+        result = read_configuration(preset=args.preset)
+    elif args.command == 'prepare-mrnet':
         from src.data.mrnet import prepare_mrnet
         result = prepare_mrnet(args.root, args.output, args.plane, args.shape, args.limit)
     elif args.command == 'train-vq':

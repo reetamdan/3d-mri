@@ -7,5 +7,5 @@ from src.utils.config import load_config
 
 def configuration(description):
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('--config', default=str(Path(__file__).resolve().parents[1] / 'configs/config.yaml'))
+    parser.add_argument('--config', help='YAML override; defaults to the bundled preprocessing preset')
     return load_config(parser.parse_args().config)

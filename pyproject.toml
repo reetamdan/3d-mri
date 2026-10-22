@@ -21,6 +21,9 @@ metrics = ["pytorch-msssim>=1.0,<2"]
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
+[tool.setuptools.cmdclass]
+build_py = "mri3d._build.BuildPy"
+
 [tool.setuptools.packages.find]
 include = ["mri3d*", "src*", "app*", "scripts*"]
 exclude = ["tests*", "data*", "runs*"]
@@ -37,11 +40,11 @@ select = ["E9", "F"]
 python_version = "3.12"
 ignore_missing_imports = true
 check_untyped_defs = true
-files = ["src/utils/artifacts.py", "src/training/statistics.py"]
+packages = ["src", "app", "mri3d", "scripts"]
 
 [tool.coverage.run]
 branch = true
-source = ["src", "app", "mri3d"]
+source = ["src", "app", "mri3d", "scripts"]
 
 [tool.coverage.report]
 show_missing = true

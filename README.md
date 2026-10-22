@@ -203,6 +203,21 @@ The installed `mri3d` CLI also exposes `freeze-protocol`, external-cohort
 `evaluate-features`, `prepare-review`, `summarize-review`, and `relocate`.
 The [upgrade guide](docs/research-upgrade.md) explains their contracts and limits.
 
+Default preprocessing/training presets are included in the installed wheel, so
+commands can resolve their defaults outside the source checkout:
+
+```bash
+mri3d show-config --preset models.yaml
+python -m scripts.validate_dataset
+```
+
+Use `--config <file.yaml>` to supply an editable override. Explicit preprocessing
+YAML paths resolve relative to that file; bundled preprocessing paths resolve to
+`data/` and `logs/` in the current workspace. `mri3d-study` accepts
+`--baseline-config` and `--upgraded-config`; the study uses each preset's configured
+device and geometry. Public YAML files in `configs/` are the single source for
+bundled presets; local override files are excluded from the wheel.
+
 ## Reference results
 
 The recorded reduced-cohort experiment used 128×128×32 sagittal inputs:
@@ -267,17 +282,25 @@ python -m mypy
 python -m pytest -q --cov --cov-report=term-missing
 ```
 
-Research-v2 verification passed **124 automated tests** with **87.82% combined
-statement/branch coverage**, including actual CUDA checks here. The 20 existing
-Chrome workflows plus two upgraded-model checks passed, covering downloads,
-responsive layouts, live EMA/CFG/DDIM inference and tokenizer diagnostics. The
-[original UI record](docs/ui-verification.md) and [v2 guide](docs/research-upgrade.md)
-describe the tested scope. On a fresh clone, tests requiring downloaded samples or
+Engineering verification passed **144 automated tests** with **72.60% automated
+statement/branch coverage across `src/`, `app/`, `mri3d/`, and `scripts/`**.
+An empty-data workspace with CUDA hidden passed **138 tests**, with six expected
+skips and **70.52% coverage**. Mypy checks all **64 runtime source files**.
+Tests include orchestration/resume,
+protocol reservation, missing-hash overlap rejection, persistent sample browsing,
+cache invalidation, an isolated wheel install, and actual CUDA/live-checkpoint
+inference. The live test writes into a temporary copy of its run.
+
+See the [engineering verification record](docs/engineering-verification.md) for
+the current scope, the [output/usefulness assessment](docs/results/output-verification.md)
+for independently recomputed M4 metrics and the completed augmentation probe, and
+the [original UI record](docs/ui-verification.md) for
+historical browser checks. On a fresh clone, tests requiring downloaded samples or
 completed checkpoints skip; tests never download data automatically. GitHub
-Actions runs the offline CPU suite on Linux and Windows with lint, focused type
-checks and a 70% statement/branch coverage floor. A manual trusted-main GPU
-workflow is supplied for an operator-provisioned runner; hosted GPU CI is not
-claimed. Local CUDA tests skip explicitly when no CUDA device is available.
+Actions defines Linux/Windows offline CPU jobs with lint, runtime-package type
+checks, wheel-install verification, and a 70% statement/branch coverage floor.
+A manual trusted-main GPU workflow supports an operator-provisioned runner.
+Local CUDA tests skip explicitly when no CUDA device is available.
 
 ## Configuration and credentials
 

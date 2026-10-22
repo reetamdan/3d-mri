@@ -2,6 +2,7 @@
 import itertools
 import json
 from pathlib import Path
+from typing import TypedDict
 import numpy as np
 import torch
 from torch.nn import functional as F
@@ -11,6 +12,11 @@ from src.utils.integrity import generated_volume
 from .protocol import evaluation_context
 from .statistics import bootstrap_interval
 from .diagnostics import artifact_descriptors
+
+
+class Neighbor(TypedDict):
+    mse: float
+    scan_id: str | None
 
 
 def multiscale_ssim(a, b, data_range=2., window=3, max_levels=5):
@@ -86,8 +92,8 @@ def evaluate_generation(generated_dir, real_root, output, max_samples=16, traini
     if not originals or not train_indices:
         raise ValueError('Real comparison and full training references must be nonempty')
     # max_samples bounds expensive diversity diagnostics, never memorization search.
-    nearest = [dict(mse=float('inf'), scan_id=None) for _ in generated]
-    feature_nearest = [dict(mse=float('inf'), scan_id=None) for _ in generated]
+    nearest: list[Neighbor] = [dict(mse=float('inf'), scan_id=None) for _ in generated]
+    feature_nearest: list[Neighbor] = [dict(mse=float('inf'), scan_id=None) for _ in generated]
     def spatial_features(array):
         tensor = torch.as_tensor(array.copy(), dtype=torch.float32)[None, None]
         return F.adaptive_avg_pool3d(tensor, (4, 4, 4)).flatten().numpy()

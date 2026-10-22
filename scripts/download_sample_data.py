@@ -56,6 +56,8 @@ def download_samples():
             clean.CopyInformation(image)
             sitk.WriteImage(clean, str(output), True)
         nii = nib.load(output)
+        if not isinstance(nii, nib.Nifti1Image):
+            raise ValueError('Expected the converted NIfTI-1 sample')
         original = sitk.GetArrayFromImage(image).transpose(2, 1, 0)
         np.testing.assert_array_equal(np.asarray(nii.dataobj), original)
         lps_to_ras = np.diag([-1., -1., 1.])
