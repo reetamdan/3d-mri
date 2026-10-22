@@ -1,8 +1,13 @@
 """Bundle only public presets; configs/ remains their single source of truth."""
 from pathlib import Path
+import ast
 from setuptools.command.build_py import build_py
 
-from mri3d.presets import PRESETS
+# PEP 517 loads this file before application packages are importable. Read the
+# literal public manifest without importing mri3d or any runtime dependency.
+_manifest = ast.parse((Path(__file__).parent/'presets/__init__.py').read_text(encoding='utf-8'))
+PRESETS = ast.literal_eval(next(node.value for node in _manifest.body if isinstance(node, ast.Assign)
+                               and any(isinstance(target, ast.Name) and target.id == 'PRESETS' for target in node.targets)))
 
 
 class BuildPy(build_py):

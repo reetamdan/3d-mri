@@ -10,6 +10,21 @@ from src.utils.config import load_config
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_build_hook_requires_no_application_imports(monkeypatch):
+    import builtins
+    import importlib.util
+    original = builtins.__import__
+    def isolated_import(name, *args, **kwargs):
+        if name.split('.')[0] in ('mri3d', 'src', 'app', 'scripts'):
+            raise ModuleNotFoundError('Application unavailable in isolated build')
+        return original(name, *args, **kwargs)
+    spec = importlib.util.spec_from_file_location('isolated_build_hook', ROOT/'mri3d/_build.py')
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setattr(builtins, '__import__', isolated_import)
+    spec.loader.exec_module(module)
+    assert module.PRESETS == PRESETS
+
+
 def test_default_preprocessing_paths_belong_to_workspace(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     config = load_config()
