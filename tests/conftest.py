@@ -7,6 +7,12 @@ import pytest
 from src.utils.config import load_config
 
 
+def pytest_configure(config):
+    # pytest creates its chosen basetemp, but not a missing parent directory.
+    if config.option.basetemp:
+        Path(config.option.basetemp).resolve().parent.mkdir(parents=True, exist_ok=True)
+
+
 @pytest.fixture
 def synthetic_volume():
     """Synthetic numerical test fixture, not an MRI or clinical image."""
