@@ -319,6 +319,8 @@ python -m pytest -q --cov --cov-report=term-missing
 
 The representation-study extension passed **184 automated tests** with **72.88% automated
 statement/branch coverage across `src/`, `app/`, `mri3d/`, and `scripts/`**.
+An empty-data clean checkout with CUDA hidden passed **178 tests**, with six
+expected skips and **71.42% coverage**.
 Mypy checks all **81 runtime source files**.
 Tests include orchestration/resume,
 protocol reservation, missing-hash overlap rejection, persistent sample browsing,

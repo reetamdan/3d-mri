@@ -358,6 +358,10 @@ include artificial fixtures to validate software behavior; their numerical outpu
 never enter the research result tables. Real training/audit executions above are
 separate evidence, not counted as automated-suite coverage. The required floor
 remains 70%; the current source passes mypy across 81 files and Ruff.
+A fresh detached checkout without local data/models and with CUDA hidden passed
+**178 tests, six expected skips and 71.42% coverage**. Dependency consistency and
+a separate PEP 517 isolated wheel build also passed. Full details and exact scope
+are in `docs/engineering-verification.md`.
 
 ## Reproduce the frozen screening plan
 

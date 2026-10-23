@@ -85,6 +85,7 @@ and required 70% statement/branch floor.
 | Check | Current extension result |
 |---|---|
 | Full local Windows/CUDA pytest | **184 passed**, no skips; 195.00 seconds |
+| Fresh detached checkout, no local MRI/weights, CUDA hidden | **178 passed, 6 expected skips**; 107.49 seconds; **71.42% coverage** |
 | Automated statement/branch coverage | **72.88%**, 5,453 statements and 1,810 branches included |
 | Mypy | **81 runtime source files**, passed |
 | Ruff | Passed |
@@ -106,3 +107,9 @@ explicit frozen-feature compatibility. They are not test failures. Real model
 training/audit measurements are recorded separately in
 `docs/research_v2_report.md`; running a research experiment is not counted as
 automated test coverage.
+
+The clean-checkout check used source commit `e2facc6`, a separate detached
+worktree with no copied data/run outputs, and the same installed research-enabled
+Python environment with `CUDA_VISIBLE_DEVICES=''`. It verifies offline data/run
+independence locally; the Linux/Windows hosted jobs additionally install the CPU
+PyTorch wheel from scratch.
