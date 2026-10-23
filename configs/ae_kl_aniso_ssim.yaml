@@ -1,0 +1,22 @@
+shape: [128, 128, 32]
+device: cuda
+threads: 4
+seed: 42
+epochs: 40
+batch_size: 2
+steps_per_epoch: 48
+learning_rate: 0.0003
+gradient_accumulation: 1
+mixed_precision: true
+smoke_test: false
+model:
+  family: kl
+  channels: [8, 16, 32]
+  latent_channels: 8
+  norm_groups: 4
+  strides: [[2, 2, 2], [2, 2, 1]]
+  use_checkpoint: false
+loss:
+  regularizer: 0.000001
+  calibrate_structural: true
+  gradient_fractions: [0.25, 0.0]

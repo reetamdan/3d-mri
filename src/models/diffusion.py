@@ -5,6 +5,56 @@ from torch import nn
 from torch.nn import functional as F
 
 
+def append_coordinates(x: torch.Tensor) -> torch.Tensor:
+    """Paper-inspired 3D index channels; no anatomical/physical coordinates inferred."""
+    axes = [torch.linspace(-1, 1, n, device=x.device, dtype=x.dtype) if n > 1 else x.new_zeros(1) for n in x.shape[2:]]
+    grid = torch.stack(torch.meshgrid(*axes, indexing='ij'))[None].expand(x.shape[0], -1, -1, -1, -1)
+    return torch.cat((x, grid), dim=1)
+
+
+def min_snr_weights(snr: torch.Tensor, gamma: float, prediction_type='epsilon') -> torch.Tensor:
+    """Hang et al., ICCV 2023: reimplemented published per-example weights.
+
+    Reference training_losses lines 846-884 distinguish epsilon, velocity and
+    clean-image targets. No four-dimensional image-specific broadcasting is used.
+    The cosine schedule has positive SNR; exact zero uses the analytic limits.
+    """
+    if not math.isfinite(gamma) or gamma <= 0 or torch.any(snr < 0) or not torch.isfinite(snr).all():
+        raise ValueError('Min-SNR requires finite nonnegative SNR and positive gamma')
+    capped = snr.clamp_max(gamma)
+    if prediction_type == 'epsilon':
+        return torch.where(snr > 0, capped/snr.clamp_min(1e-20), torch.ones_like(snr))
+    if prediction_type == 'v':
+        return capped/(snr+1)
+    if prediction_type == 'x0':
+        return capped
+    raise ValueError('Min-SNR target must be epsilon, v or x0')
+
+
+class ContextAttention3D(nn.Module):
+    """Small bottleneck cross-attention over condition tokens, not lesion masks."""
+    def __init__(self, channels, heads=4):
+        super().__init__()
+        if channels % heads:
+            raise ValueError('Context attention heads must divide channels')
+        self.heads = heads
+        self.norm = nn.GroupNorm(1, channels)
+        self.query = nn.Conv3d(channels, channels, 1)
+        self.keys, self.values = nn.Linear(channels, channels), nn.Linear(channels, channels)
+        self.output = nn.Conv3d(channels, channels, 1)
+        nn.init.zeros_(self.output.weight)
+        assert self.output.bias is not None
+        nn.init.zeros_(self.output.bias)
+
+    def forward(self, x, context):
+        batch, channels, *spatial = x.shape
+        q = self.query(self.norm(x)).reshape(batch, self.heads, channels//self.heads, -1).transpose(-1, -2)
+        k = self.keys(context).reshape(batch, -1, self.heads, channels//self.heads).transpose(1, 2)
+        v = self.values(context).reshape(batch, -1, self.heads, channels//self.heads).transpose(1, 2)
+        h = F.scaled_dot_product_attention(q, k, v).transpose(-1, -2).reshape(batch, channels, *spatial)
+        return x+self.output(h)
+
+
 class TimeBlock(nn.Module):
     def __init__(self, inputs, outputs, embedding):
         super().__init__()
@@ -45,20 +95,24 @@ class SpatialAttention3D(nn.Module):
 
 class UNet3D(nn.Module):
     def __init__(self, channels=16, base=32, label_dim=0, attention=False, attention_heads=4,
-                 channel_mult=None, allow_null_labels=False):
+                 channel_mult=None, allow_null_labels=False, conditioning_mode='film', coordinate_channels=False):
         super().__init__()
+        initial_rng = torch.get_rng_state() if coordinate_channels else None
         if base < 2:
             raise ValueError('U-Net base width must be at least two')
+        if conditioning_mode not in ('film', 'cross_attention') or (conditioning_mode == 'cross_attention' and label_dim < 1):
+            raise ValueError('Use film or conditional cross_attention')
         self.config = dict(channels=channels, base=base, label_dim=label_dim,
                            attention=attention, attention_heads=attention_heads,
-                           channel_mult=channel_mult, allow_null_labels=allow_null_labels)
+                           channel_mult=channel_mult, allow_null_labels=allow_null_labels, conditioning_mode=conditioning_mode,
+                           coordinate_channels=coordinate_channels)
         self.time_dim = base*4
         self.time_mlp = nn.Sequential(nn.Linear(self.time_dim, self.time_dim), nn.SiLU(), nn.Linear(self.time_dim, self.time_dim))
         self.labels = nn.Linear(label_dim, self.time_dim) if label_dim else None
         if label_dim and allow_null_labels:
             self.null_label = nn.Parameter(torch.zeros(self.time_dim))
         if channel_mult is None:
-            self.entry = TimeBlock(channels, base, self.time_dim)
+            self.entry = TimeBlock(channels+3 if coordinate_channels else channels, base, self.time_dim)
             self.down = nn.Conv3d(base, base*2, 4, 2, 1)
             self.middle = TimeBlock(base*2, base*2, self.time_dim)
             self.attention = SpatialAttention3D(base*2, attention_heads) if attention else nn.Identity()
@@ -68,7 +122,7 @@ class UNet3D(nn.Module):
             if len(channel_mult) < 2 or any(not isinstance(v, int) or v < 1 for v in channel_mult):
                 raise ValueError('Use at least two positive integer channel multipliers')
             widths = [base*v for v in channel_mult]
-            self.entry = TimeBlock(channels, widths[0], self.time_dim)
+            self.entry = TimeBlock(channels+3 if coordinate_channels else channels, widths[0], self.time_dim)
             self.downsamples = nn.ModuleList(nn.Conv3d(a, b, 4, 2, 1) for a, b in zip(widths, widths[1:]))
             self.encoder_blocks = nn.ModuleList(TimeBlock(w, w, self.time_dim) for w in widths[1:])
             self.middle = TimeBlock(widths[-1], widths[-1], self.time_dim)
@@ -78,6 +132,49 @@ class UNet3D(nn.Module):
             self.output = nn.Conv3d(widths[0], channels, 3, padding=1)
             assert self.output.bias is not None
             nn.init.zeros_(self.output.weight); nn.init.zeros_(self.output.bias)
+        if conditioning_mode == 'cross_attention':
+            width = base*(channel_mult[-1] if channel_mult else 2)
+            self.condition_tokens = nn.Embedding(label_dim*2, width)
+            self.null_tokens = nn.Parameter(torch.zeros(label_dim, width))
+            self.context_attention = ContextAttention3D(width, attention_heads)
+        if coordinate_channels:
+            # A controlled ablation starts from exactly the non-coordinate
+            # function. Shared weights and subsequent RNG draws are matched;
+            # only the three new trainable input columns start at zero.
+            assert initial_rng is not None
+            if isinstance(self.entry.skip, nn.Identity):
+                self.entry.skip = nn.Conv3d(channels+3, self.entry.conv1.out_channels, 1)
+            torch.set_rng_state(initial_rng)
+            reference = UNet3D(**dict(self.config, coordinate_channels=False))
+            current = self.state_dict()
+            with torch.no_grad():
+                for key, value in reference.state_dict().items():
+                    target = current[key]
+                    if target.shape == value.shape:
+                        target.copy_(value)
+                    elif key in ('entry.conv1.weight', 'entry.skip.weight'):
+                        target.zero_(); target[:, :channels].copy_(value)
+                    else:
+                        raise RuntimeError('Unsupported coordinate-ablation parameter layout')
+                if 'entry.skip.weight' not in reference.state_dict():
+                    current['entry.skip.weight'].zero_()
+                    for i in range(channels):
+                        current['entry.skip.weight'][i, i, 0, 0, 0] = 1.
+                    current['entry.skip.bias'].zero_()
+
+    def attend_context(self, h, labels, condition_mask):
+        if self.config['conditioning_mode'] == 'film':
+            return h
+        if labels is None:
+            tokens = self.null_tokens[None].expand(h.shape[0], -1, -1)
+        else:
+            if not torch.all((labels == 0) | (labels == 1)):
+                raise ValueError('Pathology condition tokens require binary labels')
+            indices = torch.arange(self.config['label_dim'], device=h.device)[None]*2+labels.long()
+            tokens = self.condition_tokens(indices)
+            if condition_mask is not None:
+                tokens = torch.where(condition_mask[:, None, None].bool(), tokens, self.null_tokens[None])
+        return self.context_attention(h, tokens)
 
     def forward(self, x, t, labels=None, condition_mask=None):
         half = self.time_dim//2
@@ -96,19 +193,19 @@ class UNet3D(nn.Module):
                         raise ValueError('Label dropout requires a trained null label and one mask per input')
                     condition = torch.where(condition_mask[:, None].bool(), condition, self.null_label[None])
             embedding = embedding+condition
-        h = self.entry(x, embedding)
+        h = self.entry(append_coordinates(x) if self.config['coordinate_channels'] else x, embedding)
         if self.config['channel_mult'] is not None:
             if min(x.shape[2:]) < 2**len(self.downsamples):
                 raise ValueError('Latent dimensions are too small for the configured U-Net depth')
             skips = [h]
             for down, block in zip(self.downsamples, self.encoder_blocks):
                 h = block(down(h), embedding); skips.append(h)
-            h = self.attention(self.middle(h, embedding))
+            h = self.attend_context(self.attention(self.middle(h, embedding)), labels, condition_mask)
             for skip, block in zip(reversed(skips[:-1]), self.decoder_blocks):
                 h = F.interpolate(h, size=skip.shape[2:], mode='trilinear', align_corners=False)
                 h = block(torch.cat((h, skip), 1), embedding)
             return self.output(h)
-        middle = self.attention(self.middle(self.down(h), embedding))
+        middle = self.attend_context(self.attention(self.middle(self.down(h), embedding)), labels, condition_mask)
         up = F.interpolate(middle, size=h.shape[2:], mode='trilinear', align_corners=False)
         return self.output(self.up(torch.cat((up, h), 1), embedding))
 
@@ -152,6 +249,15 @@ class DDPM(nn.Module):
             return noise
         a = self.cumulative[timesteps][:, None, None, None, None]
         return a.sqrt()*noise-(1-a).sqrt()*clean
+
+    def denoising_loss(self, prediction, target, timesteps, gamma=None):
+        if gamma is None:
+            return F.mse_loss(prediction, target)
+        if prediction.shape != target.shape or prediction.ndim != 5 or timesteps.shape != (prediction.shape[0],):
+            raise ValueError('Denoising loss expects aligned 5D volumes and one timestep per volume')
+        a = self.cumulative[timesteps].float()
+        weights = min_snr_weights(a/(1-a).clamp_min(1e-20), gamma, self.prediction_type)
+        return (prediction.float().sub(target.float()).square().flatten(1).mean(1)*weights).mean()
 
     def clean_and_noise(self, noisy, step, prediction):
         a = self.cumulative[step]

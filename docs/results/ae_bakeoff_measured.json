@@ -1,0 +1,1615 @@
+{
+  "groups": {
+    "ae_kl_aniso": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        2
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 26.802185303875532,
+          "seed_sd": 0.19874677217714662
+        },
+        "ssim": {
+          "mean": 0.8577954745122824,
+          "seed_sd": 0.009171673262551848
+        },
+        "ms_ssim": {
+          "mean": 0.9696232949693998,
+          "seed_sd": 0.00209752853324618
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.4667248669312735,
+          "seed_sd": 0.022195488142592344
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.16003388971174526,
+          "seed_sd": 0.011581990515641743
+        },
+        "edge_mae": {
+          "mean": 0.06294396913047033,
+          "seed_sd": 0.0005178438219437957
+        }
+      },
+      "parameters": 196409,
+      "train_peak_mib": 775.75830078125,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_kl_aniso_deconv": {
+      "seeds": [
+        42
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        2
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 26.463364581680427,
+          "seed_sd": null
+        },
+        "ssim": {
+          "mean": 0.8462846725141356,
+          "seed_sd": null
+        },
+        "ms_ssim": {
+          "mean": 0.967583179473877,
+          "seed_sd": null
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.4588886256195339,
+          "seed_sd": null
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.13359588594672653,
+          "seed_sd": null
+        },
+        "edge_mae": {
+          "mean": 0.06522446730834312,
+          "seed_sd": null
+        }
+      },
+      "parameters": 167993,
+      "train_peak_mib": 741.37890625,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_kl_aniso_perceptual": {
+      "seeds": [
+        42
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        2
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 26.891348723308315,
+          "seed_sd": null
+        },
+        "ssim": {
+          "mean": 0.8624721351773829,
+          "seed_sd": null
+        },
+        "ms_ssim": {
+          "mean": 0.9780535747607549,
+          "seed_sd": null
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.48469799149373255,
+          "seed_sd": null
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.14933137907224212,
+          "seed_sd": null
+        },
+        "edge_mae": {
+          "mean": 0.06242637004899645,
+          "seed_sd": null
+        }
+      },
+      "parameters": 196409,
+      "train_peak_mib": 1052.92138671875,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_kl_aniso_ssim": {
+      "seeds": [
+        42
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        2
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 27.00254971527302,
+          "seed_sd": null
+        },
+        "ssim": {
+          "mean": 0.8734124224730796,
+          "seed_sd": null
+        },
+        "ms_ssim": {
+          "mean": 0.9796024536093076,
+          "seed_sd": null
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.5011746150980162,
+          "seed_sd": null
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.14510828917106977,
+          "seed_sd": null
+        },
+        "edge_mae": {
+          "mean": 0.06262636667189998,
+          "seed_sd": null
+        }
+      },
+      "parameters": 196409,
+      "train_peak_mib": 807.88671875,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_kl_aniso_structural": {
+      "seeds": [
+        42
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        2
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 26.980930871618614,
+          "seed_sd": null
+        },
+        "ssim": {
+          "mean": 0.8745265427307678,
+          "seed_sd": null
+        },
+        "ms_ssim": {
+          "mean": 0.9789706543087959,
+          "seed_sd": null
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.5104258653021043,
+          "seed_sd": null
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.15703114769353094,
+          "seed_sd": null
+        },
+        "edge_mae": {
+          "mean": 0.06248240730852892,
+          "seed_sd": null
+        }
+      },
+      "parameters": 196409,
+      "train_peak_mib": 809.0986328125,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_kl_iso": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        4
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 25.50226694387156,
+          "seed_sd": 0.06993367680965926
+        },
+        "ssim": {
+          "mean": 0.8169155209544746,
+          "seed_sd": 0.003707093302073316
+        },
+        "ms_ssim": {
+          "mean": 0.9554224900073475,
+          "seed_sd": 0.001080873525231349
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.3575950114753566,
+          "seed_sd": 0.015676754101458194
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.09669825287066167,
+          "seed_sd": 0.004187745922398344
+        },
+        "edge_mae": {
+          "mean": 0.067773708657638,
+          "seed_sd": 8.901663298016794e-05
+        }
+      },
+      "parameters": 196409,
+      "train_peak_mib": 751.75048828125,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_kl_low_compression": {
+      "seeds": [
+        42
+      ],
+      "spatial_compression": [
+        2,
+        2,
+        2
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 29.072428988584793,
+          "seed_sd": null
+        },
+        "ssim": {
+          "mean": 0.9157841442917358,
+          "seed_sd": null
+        },
+        "ms_ssim": {
+          "mean": 0.9863458375136057,
+          "seed_sd": null
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.5702020534251874,
+          "seed_sd": null
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.25453800541072397,
+          "seed_sd": null
+        },
+        "edge_mae": {
+          "mean": 0.05435652476523084,
+          "seed_sd": null
+        }
+      },
+      "parameters": 196409,
+      "train_peak_mib": 918.40185546875,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_vq_baseline": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        4
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 24.351541170697587,
+          "seed_sd": 0.10017684267451175
+        },
+        "ssim": {
+          "mean": 0.7690734963608292,
+          "seed_sd": 0.00814494151663334
+        },
+        "ms_ssim": {
+          "mean": 0.9349260793791877,
+          "seed_sd": 0.0023352110112401137
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.31406794148828177,
+          "seed_sd": 0.01551683523522436
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.10751659800981558,
+          "seed_sd": 0.0029619905758654927
+        },
+        "edge_mae": {
+          "mean": 0.07245456776333514,
+          "seed_sd": 8.203195163108573e-05
+        }
+      },
+      "parameters": 214697,
+      "train_peak_mib": 202.92236328125,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    },
+    "ae_vq_improved": {
+      "seeds": [
+        42
+      ],
+      "spatial_compression": [
+        4,
+        4,
+        4
+      ],
+      "metrics": {
+        "psnr": {
+          "mean": 24.6404258473857,
+          "seed_sd": null
+        },
+        "ssim": {
+          "mean": 0.7863624552689864,
+          "seed_sd": null
+        },
+        "ms_ssim": {
+          "mean": 0.9425296038389206,
+          "seed_sd": null
+        },
+        "gradient_energy_ratio": {
+          "mean": 0.33511436116473964,
+          "seed_sd": null
+        },
+        "high_frequency_energy_ratio": {
+          "mean": 0.11138938593773802,
+          "seed_sd": null
+        },
+        "edge_mae": {
+          "mean": 0.07161507858654818,
+          "seed_sd": null
+        }
+      },
+      "parameters": 215721,
+      "train_peak_mib": 202.93408203125,
+      "gates_passed": 0,
+      "anatomy_metric": null
+    }
+  },
+  "records": [
+    {
+      "name": "ae_vq_baseline-42",
+      "arm": "ae_vq_baseline",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.014968952224200026,
+        "mae": 0.07387372292596572,
+        "psnr": 24.413985123861284,
+        "ssim": 0.7736556819754012,
+        "ms_ssim": 0.9361109559734663,
+        "gradient_energy_ratio": 0.3243535217419142,
+        "edge_mae": 0.07236911214441544,
+        "high_frequency_energy_ratio": 0.10618039624277716
+      },
+      "parameters": 214697,
+      "compression": [
+        4,
+        4,
+        4
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        8
+      ],
+      "training_peak_cuda_mib": 202.92236328125,
+      "inference_peak_cuda_mib": 31.29541015625,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": false,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_vq_baseline-42/training/best.pt",
+      "checkpoint_sha256": "8f7df2dd8dd78d4fd08adb345313f444bd3c6e4e8f0793372a0e842e5c98ffdf",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 0.11415476380268459,
+          "lower": 0.10311160927633575,
+          "upper": 0.1266342522125298,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.007775373821857612,
+          "lower": 0.006643967969218858,
+          "upper": 0.008819129661721594,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.00016938138290342712,
+          "lower": -0.0002109703424332644,
+          "upper": -0.00011673130794439078,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-BAKEOFF",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_vq_improved-42",
+      "arm": "ae_vq_improved",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.014223228623285624,
+        "mae": 0.07297552549594157,
+        "psnr": 24.6404258473857,
+        "ssim": 0.7863624552689864,
+        "ms_ssim": 0.9425296038389206,
+        "gradient_energy_ratio": 0.33511436116473964,
+        "edge_mae": 0.07161507858654818,
+        "high_frequency_energy_ratio": 0.11138938593773802
+      },
+      "parameters": 215721,
+      "compression": [
+        4,
+        4,
+        4
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        8
+      ],
+      "training_peak_cuda_mib": 202.93408203125,
+      "inference_peak_cuda_mib": 31.29931640625,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_vq_improved-42/training/best.pt",
+      "checkpoint_sha256": "f3644e64d3d9faaa58ba70280cbf28834b76dc1a4e2ef7b02498bc716c2adde4",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 0.34059548732709927,
+          "lower": 0.31579168967669063,
+          "upper": 0.36584267761336375,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.02048214711544256,
+          "lower": 0.018947746219767966,
+          "upper": 0.022017519835570088,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.0009234149407706934,
+          "lower": -0.0010118679201781544,
+          "upper": -0.0008431817246854128,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-BAKEOFF",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_iso-42",
+      "arm": "ae_kl_iso",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.011669924929712394,
+        "mae": 0.066045451493262,
+        "psnr": 25.546939758333348,
+        "ssim": 0.8190974138275905,
+        "ms_ssim": 0.9558927814165751,
+        "gradient_energy_ratio": 0.3555302776871532,
+        "edge_mae": 0.06768379715416324,
+        "high_frequency_energy_ratio": 0.09887544729226866
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        4
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        8
+      ],
+      "training_peak_cuda_mib": 751.75048828125,
+      "inference_peak_cuda_mib": 141.42626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_iso-42/training/best.pt",
+      "checkpoint_sha256": "b2edafd5a39f00d52c7874bff1079b6ac26cf849359a9cf4ed795ce3198650f0",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 1.2471093982747496,
+          "lower": 1.1379592623772978,
+          "upper": 1.3627256571602604,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.05321710567404688,
+          "lower": 0.050597003718318,
+          "upper": 0.05613609159703616,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.004854696373155624,
+          "lower": -0.005093521474858488,
+          "upper": -0.004623448028512269,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-BAKEOFF",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_aniso-42",
+      "arm": "ae_kl_aniso",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.008338092348285787,
+        "mae": 0.05669692228678086,
+        "psnr": 27.029203485085272,
+        "ssim": 0.8681920883308122,
+        "ms_ssim": 0.9719919537504514,
+        "gradient_energy_ratio": 0.48772779924290255,
+        "edge_mae": 0.062354357561161276,
+        "high_frequency_energy_ratio": 0.17048195810118227
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        2
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        16
+      ],
+      "training_peak_cuda_mib": 775.75830078125,
+      "inference_peak_cuda_mib": 141.92626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": true,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_aniso-42/training/best.pt",
+      "checkpoint_sha256": "3640c4afbef191b800ebf48bc9cec446dc2d77d630302b73ddc7456b37d4c581",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 2.729373125026673,
+          "lower": 2.54099294326506,
+          "upper": 2.920608395746788,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.10231178017726854,
+          "lower": 0.09619355340343501,
+          "upper": 0.10859538542161122,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.010184135966157595,
+          "lower": -0.010944214162418352,
+          "upper": -0.009526464666976152,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-BAKEOFF",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_aniso_ssim-42",
+      "arm": "ae_kl_aniso_ssim",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.008358879436639814,
+        "mae": 0.05795723827366813,
+        "psnr": 27.00254971527302,
+        "ssim": 0.8734124224730796,
+        "ms_ssim": 0.9796024536093076,
+        "gradient_energy_ratio": 0.5011746150980162,
+        "edge_mae": 0.06262636667189998,
+        "high_frequency_energy_ratio": 0.14510828917106977
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        2
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        16
+      ],
+      "training_peak_cuda_mib": 807.88671875,
+      "inference_peak_cuda_mib": 133.80126953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": true,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_aniso_ssim-42/training/best.pt",
+      "checkpoint_sha256": "a920dd3f9f198b1edfa2fe4719ac8544912f9c5d514e189ad08caaef89ad4983",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 2.702719355214421,
+          "lower": 2.5370689609047536,
+          "upper": 2.86664334324362,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.10753211431953591,
+          "lower": 0.10126069241998874,
+          "upper": 0.11432848119658037,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.009912126855418875,
+          "lower": -0.01056548627593153,
+          "upper": -0.009318379930101098,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-BAKEOFF",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_aniso_structural-42",
+      "arm": "ae_kl_aniso_structural",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.008389041221846772,
+        "mae": 0.058418224227557713,
+        "psnr": 26.980930871618614,
+        "ssim": 0.8745265427307678,
+        "ms_ssim": 0.9789706543087959,
+        "gradient_energy_ratio": 0.5104258653021043,
+        "edge_mae": 0.06248240730852892,
+        "high_frequency_energy_ratio": 0.15703114769353094
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        2
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        16
+      ],
+      "training_peak_cuda_mib": 809.0986328125,
+      "inference_peak_cuda_mib": 133.80126953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": true,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_aniso_structural-42/training/best.pt",
+      "checkpoint_sha256": "40ab1caa5b4d3528f6d0efbfc1a566100e42e4624b4e45024c987fc5c8cff784",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 2.681100511560018,
+          "lower": 2.5030368318974814,
+          "upper": 2.85598929176286,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.1086462345772241,
+          "lower": 0.10213430139559092,
+          "upper": 0.11573843446558142,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.010056086218789942,
+          "lower": -0.010752027519458567,
+          "upper": -0.009438953813558785,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-BAKEOFF",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_vq_baseline-43",
+      "arm": "ae_vq_baseline",
+      "seed": 43,
+      "metrics": {
+        "mse": 0.015575221201071942,
+        "mae": 0.07517353944200905,
+        "psnr": 24.235992660075727,
+        "ssim": 0.759669545228328,
+        "ms_ssim": 0.9322359611590704,
+        "gradient_energy_ratio": 0.29621974680861224,
+        "edge_mae": 0.0725326826323605,
+        "high_frequency_energy_ratio": 0.10545810545098984
+      },
+      "parameters": 214697,
+      "compression": [
+        4,
+        4,
+        4
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        8
+      ],
+      "training_peak_cuda_mib": 202.92236328125,
+      "inference_peak_cuda_mib": 31.29541015625,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": false,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_vq_baseline-43/training/best.pt",
+      "checkpoint_sha256": "c7bca3bfe57aeb5e29f2b3ef36a4393ff16d393b5398565907d9f850c773ff12",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": -0.06383770003940266,
+          "lower": -0.08974804683035541,
+          "upper": -0.036053321411247605,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": -0.006210762913052832,
+          "lower": -0.008168085571279807,
+          "upper": -0.004507465957670289,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -5.810902123771129e-06,
+          "lower": -7.988688910197985e-05,
+          "upper": 5.9728881334618934e-05,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-CONFIRMATION",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_iso-43",
+      "arm": "ae_kl_iso",
+      "seed": 43,
+      "metrics": {
+        "mse": 0.011672728979773497,
+        "mae": 0.06522738214965071,
+        "psnr": 25.53818835918979,
+        "ssim": 0.8190139394026487,
+        "ms_ssim": 0.9561885471145312,
+        "gradient_energy_ratio": 0.3742018213754048,
+        "edge_mae": 0.06777552623481611,
+        "high_frequency_energy_ratio": 0.09934891818720985
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        4
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        8
+      ],
+      "training_peak_cuda_mib": 751.75048828125,
+      "inference_peak_cuda_mib": 141.42626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_iso-43/training/best.pt",
+      "checkpoint_sha256": "ebf485a475f8fb674d60f81353b80b7ae040706d1e10f0ff7831b4a6408b1152",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 1.2383579990746572,
+          "lower": 1.152792051347452,
+          "upper": 1.3280743185758108,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.053133631261268056,
+          "lower": 0.049423251342735036,
+          "upper": 0.05667890812991093,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.004762967299668156,
+          "lower": -0.005004942700802563,
+          "upper": -0.004522572060123962,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-CONFIRMATION",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_aniso-43",
+      "arm": "ae_kl_aniso",
+      "seed": 43,
+      "metrics": {
+        "mse": 0.008917950804803327,
+        "mae": 0.0578330906957935,
+        "psnr": 26.71778529262748,
+        "ssim": 0.8543442812988818,
+        "ms_ssim": 0.968876821299394,
+        "gradient_energy_ratio": 0.4689433583077311,
+        "edge_mae": 0.06332497742047154,
+        "high_frequency_energy_ratio": 0.16203971751444068
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        2
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        16
+      ],
+      "training_peak_cuda_mib": 775.75830078125,
+      "inference_peak_cuda_mib": 141.92626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": true,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_aniso-43/training/best.pt",
+      "checkpoint_sha256": "ce529b4d8c46e470e244d86ffffd828c6f178926472e5ef3c78ec4a4ffd058cd",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 2.417954932512346,
+          "lower": 2.265498043275694,
+          "upper": 2.576808162415116,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.08846397315750114,
+          "lower": 0.0804594278067404,
+          "upper": 0.09592782535169941,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.009213516114012723,
+          "lower": -0.009884861628063693,
+          "upper": -0.008638086366890872,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-CONFIRMATION",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_vq_baseline-44",
+      "arm": "ae_vq_baseline",
+      "seed": 44,
+      "metrics": {
+        "mse": 0.014977906775565921,
+        "mae": 0.07406147761186006,
+        "psnr": 24.404645728155753,
+        "ssim": 0.7738952618787586,
+        "ms_ssim": 0.9364313210050265,
+        "gradient_energy_ratio": 0.3216305559143188,
+        "edge_mae": 0.07246190851322948,
+        "high_frequency_energy_ratio": 0.11091129233567976
+      },
+      "parameters": 214697,
+      "compression": [
+        4,
+        4,
+        4
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        8
+      ],
+      "training_peak_cuda_mib": 202.92236328125,
+      "inference_peak_cuda_mib": 31.29541015625,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": false,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_vq_baseline-44/training/best.pt",
+      "checkpoint_sha256": "4df4b7a0439e324060a9901fb7d96061531da1f2c2409c0e07d543157b2900e8",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 0.10481536804062186,
+          "lower": 0.06305973187350444,
+          "upper": 0.16069822855270618,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.008014953737377812,
+          "lower": 0.0070009475034349304,
+          "upper": 0.009073623026353594,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -7.658502125478927e-05,
+          "lower": -0.00018141185565023667,
+          "upper": 1.959417880403969e-05,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-CONFIRMATION",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_iso-44",
+      "arm": "ae_kl_iso",
+      "seed": 44,
+      "metrics": {
+        "mse": 0.011987816276121083,
+        "mae": 0.06553054064603396,
+        "psnr": 25.421672714091546,
+        "ssim": 0.8126352096331847,
+        "ms_ssim": 0.9541861414909363,
+        "gradient_energy_ratio": 0.3430529353635119,
+        "edge_mae": 0.06786180258393466,
+        "high_frequency_energy_ratio": 0.09187039313250649
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        4
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        8
+      ],
+      "training_peak_cuda_mib": 751.75048828125,
+      "inference_peak_cuda_mib": 141.42626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_iso-44/training/best.pt",
+      "checkpoint_sha256": "002edca56c21f734e07396b6f1d475902a524444258c8f18528522d2c0e0ed7d",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 1.121842353976412,
+          "lower": 1.0272514073787147,
+          "upper": 1.2242118388650425,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.046754901491804,
+          "lower": 0.043772873412189224,
+          "upper": 0.04991780253584862,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.004676690950549607,
+          "lower": -0.004883572927011874,
+          "upper": -0.004484318505573272,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-CONFIRMATION",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_aniso-44",
+      "arm": "ae_kl_aniso",
+      "seed": 44,
+      "metrics": {
+        "mse": 0.009037026442586636,
+        "mae": 0.058096724652818475,
+        "psnr": 26.65956713391385,
+        "ssim": 0.8508500539071534,
+        "ms_ssim": 0.968001109858354,
+        "gradient_energy_ratio": 0.44350344324318697,
+        "edge_mae": 0.06315257240977817,
+        "high_frequency_energy_ratio": 0.1475799935196128
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        2
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        16
+      ],
+      "training_peak_cuda_mib": 775.75830078125,
+      "inference_peak_cuda_mib": 141.92626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": false,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_aniso-44/training/best.pt",
+      "checkpoint_sha256": "3f57792225a5e80c030b33ff776c953eff98c9c3d991fbb341065a2d5ee165ca",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 2.359736773798717,
+          "lower": 2.222917222597278,
+          "upper": 2.5025803486854046,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.08496974576577272,
+          "lower": 0.08030954075389972,
+          "upper": 0.08992958171339144,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.009385921124706098,
+          "lower": -0.010058349155166351,
+          "upper": -0.008829672464783014,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-CONFIRMATION",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_aniso_perceptual-42",
+      "arm": "ae_kl_aniso_perceptual",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.008602116317172498,
+        "mae": 0.05848360484386934,
+        "psnr": 26.891348723308315,
+        "ssim": 0.8624721351773829,
+        "ms_ssim": 0.9780535747607549,
+        "gradient_energy_ratio": 0.48469799149373255,
+        "edge_mae": 0.06242637004899645,
+        "high_frequency_energy_ratio": 0.14933137907224212
+      },
+      "parameters": 196409,
+      "compression": [
+        4,
+        4,
+        2
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        16
+      ],
+      "training_peak_cuda_mib": 1052.92138671875,
+      "inference_peak_cuda_mib": 141.92626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": true,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_aniso_perceptual-42/training/best.pt",
+      "checkpoint_sha256": "77089d2401392abbf8551646165716dca25967be121cb6c70780baa86d0f77b3",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 2.5915183628305445,
+          "lower": 2.3932832172027942,
+          "upper": 2.774426795016456,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.0965918270505645,
+          "lower": 0.08950353397978171,
+          "upper": 0.10362988430256385,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.010112123481125394,
+          "lower": -0.010810035277705993,
+          "upper": -0.009483805643292095,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-PERCEPTUAL",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_low_compression-42",
+      "arm": "ae_kl_low_compression",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.005323972998852761,
+        "mae": 0.04622690546881936,
+        "psnr": 29.072428988584793,
+        "ssim": 0.9157841442917358,
+        "ms_ssim": 0.9863458375136057,
+        "gradient_energy_ratio": 0.5702020534251874,
+        "edge_mae": 0.05435652476523084,
+        "high_frequency_energy_ratio": 0.25453800541072397
+      },
+      "smoke_test": false,
+      "parameters": 196409,
+      "compression": [
+        2,
+        2,
+        2
+      ],
+      "latent_shape": [
+        8,
+        64,
+        64,
+        16
+      ],
+      "training_peak_cuda_mib": 918.40185546875,
+      "inference_peak_cuda_mib": 144.92626953125,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": true,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_low_compression-42/training/best.pt",
+      "checkpoint_sha256": "f27b999263e2053a152b8594c44f1100fbfc9d88b90aa404048e11a190388d4a",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 4.772598627673417,
+          "lower": 4.445495180238049,
+          "upper": 5.068426071683781,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.1499038361246924,
+          "lower": 0.14029649908317318,
+          "upper": 0.15955803976871896,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.018181968762154957,
+          "lower": -0.019291410981282772,
+          "upper": -0.017129865608858274,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-LOW-COMPRESSION",
+      "actual_updates": 1920
+    },
+    {
+      "name": "ae_kl_aniso_deconv-42",
+      "arm": "ae_kl_aniso_deconv",
+      "seed": 42,
+      "metrics": {
+        "mse": 0.009463145261288622,
+        "mae": 0.05945168986082792,
+        "psnr": 26.463364581680427,
+        "ssim": 0.8462846725141356,
+        "ms_ssim": 0.967583179473877,
+        "gradient_energy_ratio": 0.4588886256195339,
+        "edge_mae": 0.06522446730834312,
+        "high_frequency_energy_ratio": 0.13359588594672653
+      },
+      "smoke_test": false,
+      "parameters": 167993,
+      "compression": [
+        4,
+        4,
+        2
+      ],
+      "latent_shape": [
+        8,
+        32,
+        32,
+        16
+      ],
+      "training_peak_cuda_mib": 741.37890625,
+      "inference_peak_cuda_mib": 137.8046875,
+      "quantitative_gate": {
+        "psnr": true,
+        "ssim": true,
+        "ms_ssim": true,
+        "gradient_range": false,
+        "gradient_improvement": true,
+        "high_frequency_range": false,
+        "edge_error": true
+      },
+      "quantitative_gate_pass": false,
+      "visual_review": "pending",
+      "checkpoint": "ae_kl_aniso_deconv-42/training/best.pt",
+      "checkpoint_sha256": "416983b3fbd9171b9cbfe7b8522ec0562aaf21cb71feb63e77ce32fde74b6b91",
+      "paired_exam_intervals": {
+        "psnr": {
+          "mean": 2.163534220806488,
+          "lower": 2.025698632515781,
+          "upper": 2.3078758671972097,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "ssim": {
+          "mean": 0.08040436433438974,
+          "lower": 0.07634014796127256,
+          "upper": 0.08474642633858526,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        },
+        "edge_mae": {
+          "mean": -0.007314026207334315,
+          "lower": -0.007873745949759663,
+          "upper": -0.0067951136608464255,
+          "confidence": 0.95,
+          "observations": 24,
+          "clusters": 24,
+          "resamples": 2000,
+          "seed": 42,
+          "method": "observation bootstrap",
+          "uncertainty_available": true
+        }
+      },
+      "source_study": "runs\\AE-DECODER",
+      "actual_updates": 1920
+    }
+  ],
+  "dataset_fingerprint": "11f72fdcb313825d05e563feb0b6c97726cc60556acc65e057ae2e1359cbb736",
+  "budget": [
+    1920,
+    2,
+    [
+      128,
+      128,
+      32
+    ]
+  ],
+  "pending": []
+}

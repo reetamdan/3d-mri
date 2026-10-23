@@ -17,6 +17,14 @@ guidance, DDIM, whole-cohort memorization checks, independent-cohort audit suppo
 uncertainty, portable artifacts and a packaged CLI. See the
 [upgrade guide](docs/research-upgrade.md) and [model card](docs/model-card.md).
 
+The [representation-first knee study](docs/research_v2_report.md) adds compact
+MONAI KL autoencoders, anisotropic sampling, structural objectives, train-fitted
+latent scaling, controlled Min-SNR diagnostics and fair conventional augmentation
+controls. On the frozen **96/24** cohort, anisotropic KL improves three-seed
+reconstruction to **26.802 ± 0.199 dB PSNR / 0.8578 ± 0.0092 SSIM**. Fine-detail
+gates still fail, so this is a reconstruction improvement rather than established
+synthetic-MRI utility. Its cohort is separate from the 256/60 comparison below.
+
 > **Research prototype — not for clinical diagnosis or treatment.** The current
 > reconstruction model is functional and evaluated. Randomly generated volumes
 > remain blurry and do not reliably reproduce coherent knee anatomy.
@@ -32,6 +40,9 @@ uncertainty, portable artifacts and a packaged CLI. See the
 - **3D generative models:** VQ-VAE with optional EMA codebook/reset, optional
   patch-adversarial VQ-GAN training, contiguous latent caching, and configurable
   multiresolution DDPM with attention, weight EMA, epsilon/v prediction and CFG/DDIM.
+- **Representation research:** optional official MONAI KL with isotropic/
+  anisotropic lattices, deterministic posterior-mean evaluation, adaptive 3D
+  MS-SSIM/gradient objectives, explicit frozen medical features and matched budgets.
 - **Trained-model inference:** reconstruct validation inputs and sample fresh
   volumes with a chosen seed from the dashboard.
 - **Reproducible experiments:** explicit configurations, checkpoint resume,
@@ -96,8 +107,9 @@ download data on startup.
 
 ### NVIDIA GPU setup
 
-The publication environment uses an RTX 5070 Ti Laptop GPU and patched PyTorch
-`2.14.1+cu130` (CUDA 13.0). On compatible NVIDIA hardware:
+Current local verification and the constrained representation study use an
+RTX 3060 Laptop GPU with 6 GiB VRAM and patched PyTorch `2.14.1+cu130`
+(CUDA 13.0). On compatible NVIDIA hardware:
 
 ```bash
 python -m pip install -r requirements-cuda.txt
@@ -218,6 +230,29 @@ YAML paths resolve relative to that file; bundled preprocessing paths resolve to
 device and geometry. Public YAML files in `configs/` are the single source for
 bundled presets; local override files are excluded from the wheel.
 
+### 4. Representation-first knee study (96/24)
+
+Install the optional research libraries after selecting the appropriate PyTorch
+build, then run a fresh matched-budget screening study:
+
+```bash
+python -m pip install -e ".[dev,metrics,research]"
+python scripts/representation_study.py --output runs/AE-BAKEOFF-new --device cuda
+```
+
+`requirements-research.txt` records direct research-package pins used in the
+measured environment. All nine arm definitions are bundled YAML presets. The
+[study report](docs/research_v2_report.md) gives the completed 15-run table,
+three-seed confirmations, negative perceptual/decoder/diffusion findings, resource
+measurements and commands to reproduce each distinct comparison. Run heavy jobs
+serially on memory-constrained hosts. Datasets, weights and generated images stay
+in ignored local directories.
+
+The installed CLI also exposes `train-autoencoder`, `evaluate-autoencoder`,
+`cache-representation` and `generate-balanced`. Full-cohort KL diffusion and
+serious synthetic augmentation require model-bound quality-gate receipts. A
+tiny artificial/integration test is not a passed MRI-quality gate.
+
 ## Reference results
 
 The recorded reduced-cohort experiment used 128×128×32 sagittal inputs:
@@ -282,10 +317,9 @@ python -m mypy
 python -m pytest -q --cov --cov-report=term-missing
 ```
 
-Engineering verification passed **144 automated tests** with **72.60% automated
+The representation-study extension passed **184 automated tests** with **72.88% automated
 statement/branch coverage across `src/`, `app/`, `mri3d/`, and `scripts/`**.
-An empty-data workspace with CUDA hidden passed **138 tests**, with six expected
-skips and **70.52% coverage**. Mypy checks all **64 runtime source files**.
+Mypy checks all **81 runtime source files**.
 Tests include orchestration/resume,
 protocol reservation, missing-hash overlap rejection, persistent sample browsing,
 cache invalidation, an isolated wheel install, and actual CUDA/live-checkpoint

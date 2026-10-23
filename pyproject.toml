@@ -17,6 +17,7 @@ mri3d-study = "scripts.research_study:main"
 [project.optional-dependencies]
 dev = ["ruff>=0.9,<1", "mypy>=1.13,<2", "pytest-cov>=6,<8", "types-PyYAML>=6", "types-setuptools"]
 metrics = ["pytorch-msssim>=1.0,<2"]
+research = ["monai>=1.6.1,<1.7", "torchio>=1.2.1,<2", "h5py>=3.11,<4"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}

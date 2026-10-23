@@ -16,6 +16,15 @@ from src.training.export import export_inference_pair
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_cpu_rng_snapshot_does_not_initialize_cuda(monkeypatch):
+    from src.training.state import rng_state
+    monkeypatch.setattr(torch.cuda, 'is_initialized', lambda: False)
+    def unexpected_cuda_initialization():
+        pytest.fail('CPU checkpoint bookkeeping initialized CUDA')
+    monkeypatch.setattr(torch.cuda, 'get_rng_state_all', unexpected_cuda_initialization)
+    assert rng_state()['cuda_rng'] is None
+
+
 def tiny_config():
     c = model_config(ROOT/'configs/smoke-models.yaml')
     c.update(shape=[16]*3, epochs=3, steps_per_epoch=2, conditional=True, diffusion_steps=4,

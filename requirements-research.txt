@@ -1,0 +1,8 @@
+# Direct research-package pins used in the measured constrained-hardware study.
+# Install the appropriate CPU/CUDA PyTorch build first, as described in README.
+-r requirements.txt
+monai==1.6.1
+torchio==1.2.1
+h5py==3.16.0
+einops==0.8.2
+pytorch-msssim==1.0.0

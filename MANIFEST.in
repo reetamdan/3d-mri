@@ -7,3 +7,17 @@ include configs/research-v2.yaml
 include configs/smoke-models.yaml
 include configs/prd-example.yaml
 include configs/real-scans.yaml
+include configs/ae_vq_baseline.yaml
+include configs/ae_vq_improved.yaml
+include configs/ae_kl_iso.yaml
+include configs/ae_kl_aniso.yaml
+include configs/ae_kl_aniso_ssim.yaml
+include configs/ae_kl_aniso_structural.yaml
+include configs/ae_kl_aniso_perceptual.yaml
+include configs/ae_kl_low_compression.yaml
+include configs/ae_kl_aniso_deconv.yaml
+include configs/ldm_baseline.yaml
+include configs/ldm_minsnr.yaml
+include configs/ldm_minsnr_cfg.yaml
+include configs/ldm_crossattn.yaml
+include configs/ldm_v.yaml

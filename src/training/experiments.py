@@ -22,7 +22,7 @@ from .statistics import bootstrap_interval
 from .diagnostics import foreground_metrics
 from src.utils.artifacts import reference
 from .state import ModelEMA, rng_state, restore_rng, precision, scheduler_for
-from .latents import pack_latents, LatentCache
+from .latents import pack_latents, LatentCache, transform_latents
 
 
 def checkpoint_hash(path):
@@ -223,10 +223,17 @@ def train_diffusion(latent_dir, output, c, resume=False):
         raise ValueError('Training latents are empty')
     if not c.get('smoke_test', False) and (manifest['smoke_test'] or not any(r['split'] == 'validation' for r in manifest['rows'])):
         raise ValueError('Research diffusion requires a research VQ checkpoint and validation latents')
+    representation_gate = manifest.get('representation_gate') or {}
+    if (not c.get('smoke_test', False) and manifest.get('autoencoder_family') == 'kl'
+            and not (representation_gate.get('quantitative_gate_pass') and representation_gate.get('visual_review_pass')
+                     and representation_gate.get('autoencoder_sha256') == manifest['vq_sha256']
+                     and representation_gate.get('dataset_fingerprint') == manifest['dataset_fingerprint'])):
+        raise ValueError('Full-cohort KL diffusion requires a passed representation gate; use explicit smoke diagnostics first')
     dropout = c.get('label_dropout', 0.)
     config = dict(channels=manifest['latent_shape'][0], base=c['unet_base'], label_dim=3 if conditional else 0,
                   attention=c.get('attention', False), attention_heads=c.get('attention_heads', 4),
-                  channel_mult=c.get('channel_mult'), allow_null_labels=conditional and dropout > 0)
+                  channel_mult=c.get('channel_mult'), allow_null_labels=conditional and dropout > 0,
+                  conditioning_mode=c.get('conditioning_mode', 'film'), coordinate_channels=c.get('coordinate_channels', False))
     model = UNet3D(**config).to(device)
     schedule = DDPM(c['diffusion_steps'], c.get('prediction_type', 'epsilon')).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=c['learning_rate'])
@@ -257,7 +264,7 @@ def train_diffusion(latent_dir, output, c, resume=False):
         restore_rng(ck, device)
     for epoch in range(start, c['epochs']):
         epoch_start = time.perf_counter()
-        model.train(); losses = []
+        model.train(); losses, objectives = [], []
         order = np.random.default_rng(c['seed']+epoch).permutation(len(train))
         for step in range(c['steps_per_epoch']):
             optimizer.zero_grad(set_to_none=True)
@@ -266,18 +273,20 @@ def train_diffusion(latent_dir, output, c, resume=False):
                 batch_index = step*accumulation+micro
                 batch = [train[int(order[(batch_index*c['batch_size']+j) % len(order)])] for j in range(c['batch_size'])]
                 z = cache.batch(batch).to(device)
-                z = (z-manifest['mean'])/manifest['std']
+                z = transform_latents(z, manifest)
                 labels = torch.tensor([r['labels'] for r in batch], device=device) if conditional else None
                 mask = torch.rand(len(batch), device=device) >= dropout if conditional and dropout else None
                 t = torch.randint(schedule.steps, (len(batch),), device=device)
                 noise = torch.randn_like(z)
                 with torch.autocast(device_type=device.type, dtype=dtype, enabled=amp):
                     prediction = model(schedule.add_noise(z, t, noise), t, labels, condition_mask=mask)
-                    loss = F.mse_loss(prediction, schedule.training_target(z, t, noise))
+                    target = schedule.training_target(z, t, noise)
+                    raw_loss = F.mse_loss(prediction, target)
+                    loss = raw_loss if c.get('min_snr_gamma') is None else schedule.denoising_loss(prediction, target, t, c['min_snr_gamma'])
                 if not torch.isfinite(loss):
                     raise ValueError('Nonfinite diffusion loss')
                 scaler.scale(loss/accumulation).backward()
-                losses.append(loss.item())
+                losses.append(raw_loss.item()); objectives.append(loss.item())
             scaler.unscale_(optimizer)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1., error_if_nonfinite=True)
             scaler.step(optimizer); scaler.update()
@@ -293,7 +302,7 @@ def train_diffusion(latent_dir, output, c, resume=False):
                 if row['split'] != 'validation':
                     continue
                 z = cache.tensor(row)[None].to(device)
-                z = (z-manifest['mean'])/manifest['std']
+                z = transform_latents(z, manifest)
                 y = torch.tensor([row['labels']], device=device) if conditional else None
                 draws = c.get('validation_draws', 1)
                 if draws > schedule.steps:
@@ -312,6 +321,7 @@ def train_diffusion(latent_dir, output, c, resume=False):
                     strata[min(3, int(t)*4//schedule.steps)].append(value)
         selection = float(np.mean(ema_losses or validation_losses)) if validation_losses else float(np.mean(losses))
         history.append(dict(epoch=epoch+1, noise_mse=float(np.mean(losses)),
+            weighted_training_mse=float(np.mean(objectives)), min_snr_gamma=c.get('min_snr_gamma'),
             optimizer_steps=c['steps_per_epoch'], micro_batches=len(losses), duration_seconds=time.perf_counter()-epoch_start,
             learning_rate=optimizer.param_groups[0]['lr'], selection_noise_mse=selection,
             validation_ema_mse=float(np.mean(ema_losses)) if ema_losses else None,
@@ -347,7 +357,9 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
         raise ValueError('count must be positive')
     set_seed(seed)
     device = device_for(device)
-    vq, _ = load_vq(vq_path, device)
+    from .representation import load_representation
+    from src.models.autoencoder import decode_latent
+    vq, _ = load_representation(vq_path, device)
     ck = read_checkpoint(diffusion_path, 'diffusion')
     manifest = ck['latent_manifest']
     if manifest['vq_sha256'] != checkpoint_hash(vq_path):
@@ -363,9 +375,14 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
         raise ValueError('Requested inference weights are unavailable')
     model.load_state_dict(ck['ema_model'] if selected_weights == 'ema' else ck['model'])
     schedule = DDPM(ck['config']['diffusion_steps'], ck['config'].get('prediction_type', 'epsilon')).to(device)
-    embeddings = vq.quantizer.embedding.weight
-    lower = ((embeddings.amin(0)-manifest['mean'])/manifest['std']).view(1, -1, 1, 1, 1)
-    upper = ((embeddings.amax(0)-manifest['mean'])/manifest['std']).view(1, -1, 1, 1, 1)
+    discrete = isinstance(vq, VQVAE3D)
+    if isinstance(vq, VQVAE3D):
+        embeddings = vq.quantizer.embedding.weight
+        raw_lower, raw_upper = embeddings.amin(0), embeddings.amax(0)
+    else:
+        raw_lower, raw_upper = (torch.tensor(manifest[key], device=device) for key in ('channel_min', 'channel_max'))
+    lower = transform_latents(raw_lower.view(1, -1, 1, 1, 1), manifest)
+    upper = transform_latents(raw_upper.view(1, -1, 1, 1, 1), manifest)
     out = fresh_output(output)
     rows = []
     for i in range(count):
@@ -373,12 +390,15 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
         z, sampling_diagnostics = schedule.sample(model, (1, *manifest['latent_shape']), y, seed+i,
             clip_range=(lower, upper), method=sampler, sampling_steps=sampling_steps,
             guidance_scale=guidance_scale, eta=eta, return_diagnostics=True)
-        z = z*manifest['std']+manifest['mean']
+        z = transform_latents(z, manifest, inverse=True)
         if not torch.isfinite(z).all():
             raise ValueError('Denoising produced nonfinite latents; generation cannot be accepted')
-        x = vq.decode(z, quantize=True)[0].cpu().numpy()
-        quantized = vq.quantizer(z)[0]
-        code_counts = torch.bincount(vq.quantizer.last_indices.flatten(), minlength=embeddings.shape[0]).cpu().tolist()
+        x = decode_latent(vq, z, project=discrete)[0].cpu().numpy()
+        quantization_mse, code_counts = None, None
+        if isinstance(vq, VQVAE3D):
+            quantized = vq.quantizer(z)[0]
+            quantization_mse = float((z-quantized).square().mean())
+            code_counts = torch.bincount(vq.quantizer.last_indices.flatten(), minlength=vq.quantizer.embedding.num_embeddings).cpu().tolist()
         if not np.isfinite(x).all():
             raise ValueError('Generated tensor is nonfinite')
         filename = f'synthetic_{i:04d}.npy'
@@ -387,11 +407,11 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
         np.save(out/latent_file, z[0].cpu().numpy(), allow_pickle=False)
         rows.append(dict(file=filename, latent_file=latent_file, seed=seed+i, conditioning_labels=labels,
             sha256=sha256_file(out/filename), latent_sha256=sha256_file(out/latent_file),
-            quantization_mse=float((z-quantized).square().mean()), code_counts=code_counts,
+            quantization_mse=quantization_mse, code_counts=code_counts,
             sampling_diagnostics=sampling_diagnostics,
             latent_std=float(z.std()), latent_abs_max=float(z.abs().max())))
     write_json(out/'manifest.json', dict(rows=rows, synthetic=True, smoke_test=ck['smoke_test'],
-        sampler='DDPM posterior with predicted-clean-latent clipping to trained codebook channel bounds',
+        sampler=f'{sampler.upper()} with predicted-clean clipping to '+('trained codebook' if discrete else 'training posterior-mean')+' channel bounds',
         normalized_latent_bounds=dict(lower=lower.flatten().tolist(), upper=upper.flatten().tolist()),
         sampling=dict(method=sampler, sampling_steps=sampling_steps or schedule.steps,
                       training_steps=schedule.steps, prediction_type=schedule.prediction_type,
@@ -403,7 +423,8 @@ def generate(vq_path, diffusion_path, output, count=4, seed=42, labels=None, dev
         label_semantics='Requested conditioning, not verified pathology',
         vq_sha256=checkpoint_hash(vq_path), diffusion_sha256=checkpoint_hash(diffusion_path),
         generator_train_ids=manifest['train_ids'], dataset_fingerprint=manifest['dataset_fingerprint'],
-        cohort_records=manifest.get('cohort_records', []), shape=manifest['shape']))
+        cohort_records=manifest.get('cohort_records', []),
+        representation_pretraining_records=manifest.get('representation_pretraining_records', []), shape=manifest['shape']))
     return str(out/'manifest.json')
 
 

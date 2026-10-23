@@ -75,3 +75,34 @@ Fresh clones explicitly skip tests requiring local MRI samples, trained checkpoi
 or CUDA hardware. GitHub Actions defines Linux/Windows CPU checks using a built
 installation plus isolated wheel tests; the local verification above was Windows.
 Historical browser verification is recorded separately in `docs/ui-verification.md`.
+
+## Representation-study extension — 24 October 2026
+
+The earlier table records the engineering baseline before the optional MONAI/KL
+research extension. The expanded source retains the same coverage denominator
+and required 70% statement/branch floor.
+
+| Check | Current extension result |
+|---|---|
+| Full local Windows/CUDA pytest | **184 passed**, no skips; 195.00 seconds |
+| Automated statement/branch coverage | **72.88%**, 5,453 statements and 1,810 branches included |
+| Mypy | **81 runtime source files**, passed |
+| Ruff | Passed |
+| Dependency consistency | `pip check`: no broken requirements |
+| PEP 517 isolated build | Passed; all build dependencies installed in isolation |
+| Non-editable wheel regression | Passed; every one of 23 presets loads outside the checkout |
+| CUDA and preserved live baseline | Existing mixed-precision/EMA/guidance/DDIM and temporary-copy inference tests passed |
+
+The new regression coverage includes exact CPU representation resume, native
+MONAI iso/aniso/deconvolution shapes and input gradients, train-only latent
+statistics/inverse scaling, pretraining-exposure overlap rejection, target-specific
+Min-SNR mathematics, null-token conditioning, matched coordinate initialization,
+TorchIO determinism, tied AUPRC/operating thresholds, label-stratum coverage and
+quality-gate rejection, stale feature/model lineage, and exclusion of incomplete
+or artificial study tables. Numerical fixtures stay explicitly artificial.
+
+The six emitted warnings concern PyTorch's deprecated TorchScript APIs used for
+explicit frozen-feature compatibility. They are not test failures. Real model
+training/audit measurements are recorded separately in
+`docs/research_v2_report.md`; running a research experiment is not counted as
+automated test coverage.

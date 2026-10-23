@@ -58,6 +58,9 @@ def evaluation_context(root, checkpoint, split, training_root=None):
     selected = [r for r in evaluation.records() if r['split'] == split]
     seen_splits = ('train',) if same and split == 'validation' else ('train', 'validation')
     seen = [r for r in records if r['split'] in seen_splits]
+    # Representation pretraining is also prior exposure, even when fine-tuning
+    # uses the same local cohort fingerprint and model-selection split.
+    seen += checkpoint.get('representation_pretraining_records', [])
     if not same and not has_tensor_hashes(seen):
         raise ValueError('External evaluation of a legacy checkpoint with incomplete tensor hashes requires training_root')
     audit = audit_overlap(seen, selected)

@@ -16,12 +16,13 @@ def device_for(name='auto'):
 
 
 class TrainingDataset(MRIDataset):
-    def __init__(self, root, split, shape, limit=None, require_labels=False):
+    def __init__(self, root, split, shape, limit=None, require_labels=False, strict_shape=False):
         super().__init__(root, split)
         if limit is not None:
             self.rows = self.rows[:limit]
         self.shape = tuple(shape)
         self.require_labels = require_labels
+        self.strict_shape = strict_shape
         if require_labels and any(not r.get('labels') for r in self.rows):
             raise ValueError('This stage requires real MRNet labels; unlabeled samples cannot be assigned invented labels')
         self.ids = [r['scan_id'] for r in self.rows]
@@ -33,6 +34,8 @@ class TrainingDataset(MRIDataset):
         if x.min() < -1.0001 or x.max() > 1.0001:
             raise ValueError('Model inputs require min-max normalized [-1,1] tensors')
         if tuple(x.shape[1:]) != self.shape:
+            if self.strict_shape:
+                raise ValueError('Frozen preprocessing shape differs from model; no silent resize is allowed')
             x = F.interpolate(x[None], size=self.shape, mode='trilinear', align_corners=False)[0]
         raw = self.rows[i].get('labels')
         labels = json.loads(raw) if raw else []
@@ -76,7 +79,7 @@ def fresh_output(path, resume=False):
     return path
 
 
-def model_config(path=None, *, preset='models.yaml'):
+def model_config(path=None, *, preset='models.yaml', stage=None):
     from mri3d.configuration import read_configuration
     import math
     c = read_configuration(path, preset=preset)
@@ -98,6 +101,11 @@ def model_config(path=None, *, preset='models.yaml'):
         raise ValueError('seed must be an integer in [0,2**32)')
     if c.get('prediction_type', 'epsilon') not in ('epsilon', 'v'):
         raise ValueError('prediction_type must be epsilon or v')
+    if c.get('min_snr_gamma') is not None and (not isinstance(c['min_snr_gamma'], (int, float))
+            or not math.isfinite(c['min_snr_gamma']) or c['min_snr_gamma'] <= 0):
+        raise ValueError('min_snr_gamma must be finite and positive')
+    if c.get('conditioning_mode', 'film') not in ('film', 'cross_attention'):
+        raise ValueError('conditioning_mode must be film or cross_attention')
     if not isinstance(c.get('gradient_accumulation', 1), int) or c.get('gradient_accumulation', 1) < 1:
         raise ValueError('gradient_accumulation must be a positive integer')
     if not isinstance(c.get('label_dropout', 0.), (int, float)) or not 0 <= c.get('label_dropout', 0.) < 1:
@@ -117,19 +125,20 @@ def model_config(path=None, *, preset='models.yaml'):
         raise ValueError('Training geometry cannot support the configured U-Net depth')
     if not isinstance(c.get('gan_weight', 0), (int, float)) or not math.isfinite(c.get('gan_weight', 0)) or c.get('gan_weight', 0) < 0:
         raise ValueError('Learning rate must be finite and GAN weight nonnegative')
-    if not isinstance(c.get('vq'), dict):
-        raise ValueError('vq must define an encoder/codebook configuration')
-    for key in ('base', 'latent_channels', 'codes'):
-        if not isinstance(c['vq'].get(key), int) or isinstance(c['vq'][key], bool) or c['vq'][key] < 1:
-            raise ValueError(f'vq.{key} must be a positive integer')
-    if c['vq']['codes'] < 2:
-        raise ValueError('The vector codebook requires at least two codes')
+    if stage != 'diffusion' or 'vq' in c:
+        if not isinstance(c.get('vq'), dict):
+            raise ValueError('vq must define an encoder/codebook configuration')
+        for key in ('base', 'latent_channels', 'codes'):
+            if not isinstance(c['vq'].get(key), int) or isinstance(c['vq'][key], bool) or c['vq'][key] < 1:
+                raise ValueError(f'vq.{key} must be a positive integer')
+        if c['vq']['codes'] < 2:
+            raise ValueError('The vector codebook requires at least two codes')
     base, heads = c.get('unet_base'), c.get('attention_heads', 4)
     if not isinstance(base, int) or base < 2 or not isinstance(heads, int) or heads < 1:
         raise ValueError('Invalid U-Net width or attention-head count')
     if c.get('attention') and (base*(multipliers[-1] if multipliers else 2)) % heads:
         raise ValueError('Attention heads must divide the bottleneck channel count')
-    for flag in ('mixed_precision', 'select_best', 'initialize_codebook', 'conditional', 'smoke_test', 'attention'):
+    for flag in ('mixed_precision', 'select_best', 'initialize_codebook', 'conditional', 'smoke_test', 'attention', 'coordinate_channels'):
         if flag in c and not isinstance(c[flag], bool):
             raise ValueError(f'{flag} must be true or false')
     return c

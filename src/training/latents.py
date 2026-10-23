@@ -5,6 +5,20 @@ import torch
 from src.utils.integrity import confined_path, sha256_file
 
 
+def transform_latents(z: torch.Tensor, manifest: dict, inverse=False) -> torch.Tensor:
+    """Normalize 5D tensors; legacy scalar-cache behavior stays algebraically identical."""
+    if 'channel_mean' not in manifest:
+        mean, std = manifest['mean'], manifest['std']
+    else:
+        if z.ndim != 5 or len(manifest['channel_mean']) != z.shape[1] or len(manifest['channel_std']) != z.shape[1]:
+            raise ValueError('Latent scaling channels do not match the model')
+        mean = z.new_tensor(manifest['channel_mean']).view(1, -1, 1, 1, 1)
+        std = z.new_tensor(manifest['channel_std']).view(1, -1, 1, 1, 1)
+    if not torch.isfinite(torch.as_tensor(mean)).all() or not torch.isfinite(torch.as_tensor(std)).all() or torch.any(torch.as_tensor(std) <= 0):
+        raise ValueError('Invalid latent scaling constants')
+    return z*std+mean if inverse else (z-mean)/std
+
+
 def pack_latents(root, rows):
     root = Path(root)
     packed = {}

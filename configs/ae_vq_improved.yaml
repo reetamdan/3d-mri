@@ -1,0 +1,21 @@
+# Isolate codebook capacity; no simultaneous EMA/decoder/loss changes.
+shape: [128, 128, 32]
+device: cuda
+threads: 4
+seed: 42
+epochs: 40
+batch_size: 2
+steps_per_epoch: 48
+learning_rate: 0.0003
+gradient_accumulation: 1
+mixed_precision: false
+initialize_codebook: true
+smoke_test: false
+model:
+  family: vq
+  base: 16
+  latent_channels: 8
+  codes: 256
+  commitment: 0.25
+loss:
+  regularizer: 1.0

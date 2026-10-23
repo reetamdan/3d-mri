@@ -10,7 +10,7 @@ def rng_state():
     return dict(torch_rng=torch.get_rng_state(), python_rng=random.getstate(),
                 numpy_rng=dict(generator=numpy[0], keys=numpy[1].tolist(), position=numpy[2],
                                has_gaussian=numpy[3], cached_gaussian=numpy[4]),
-                cuda_rng=torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None)
+                 cuda_rng=torch.cuda.get_rng_state_all() if torch.cuda.is_initialized() else None)
 
 
 def restore_rng(checkpoint, device):

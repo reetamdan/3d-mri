@@ -2,6 +2,7 @@
 import argparse
 import json
 import sys
+from typing import Any
 from pathlib import Path
 if __name__ == '__main__' and not __package__:
     # Compatibility for direct script invocation; the installed CLI uses packages.
@@ -25,16 +26,31 @@ def main():
         p.add_argument('--data', required=True); p.add_argument('--output', required=True)
         p.add_argument('--config', help='YAML file override; defaults to the bundled models.yaml preset')
         p.add_argument('--resume', action='store_true')
+    p = sub.add_parser('train-autoencoder')
+    p.add_argument('--data', required=True); p.add_argument('--output', required=True)
+    p.add_argument('--config'); p.add_argument('--resume', action='store_true')
+    p = sub.add_parser('cache-representation')
+    p.add_argument('--data', required=True); p.add_argument('--autoencoder', required=True); p.add_argument('--output', required=True)
+    p.add_argument('--device', default='auto')
+    p.add_argument('--representation-gate')
+    p = sub.add_parser('evaluate-autoencoder')
+    p.add_argument('--data', required=True); p.add_argument('--autoencoder', required=True); p.add_argument('--output', required=True)
+    p.add_argument('--device', default='auto')
     p = sub.add_parser('cache-latents')
     p.add_argument('--data', required=True); p.add_argument('--vq', required=True); p.add_argument('--output', required=True)
     p.add_argument('--device', default='auto')
     p = sub.add_parser('generate')
-    p.add_argument('--vq', required=True); p.add_argument('--diffusion', required=True); p.add_argument('--output', required=True)
+    p.add_argument('--vq', '--autoencoder', dest='vq', required=True); p.add_argument('--diffusion', required=True); p.add_argument('--output', required=True)
     p.add_argument('--count', type=int, default=4); p.add_argument('--seed', type=int, default=42)
     p.add_argument('--labels', nargs=3, type=int); p.add_argument('--device', default='auto')
     p.add_argument('--sampler', choices=['ddpm', 'ddim'], default='ddpm')
     p.add_argument('--sampling-steps', type=int); p.add_argument('--guidance-scale', type=float, default=1.)
     p.add_argument('--eta', type=float, default=0.); p.add_argument('--weights', choices=['auto', 'raw', 'ema'], default='auto')
+    p = sub.add_parser('generate-balanced')
+    p.add_argument('--autoencoder', required=True); p.add_argument('--diffusion', required=True); p.add_argument('--output', required=True)
+    p.add_argument('--count', type=int, default=40); p.add_argument('--seed', type=int, default=42)
+    p.add_argument('--device', default='auto'); p.add_argument('--sampler', choices=['ddpm', 'ddim'], default='ddpm')
+    p.add_argument('--sampling-steps', type=int); p.add_argument('--guidance-scale', type=float, default=1.)
     p = sub.add_parser('evaluate-reconstruction')
     p.add_argument('--data', required=True); p.add_argument('--vq', required=True); p.add_argument('--output', required=True)
     p.add_argument('--split', choices=['train', 'validation', 'test'], default='validation'); p.add_argument('--device', default='auto')
@@ -71,6 +87,7 @@ def main():
     p.add_argument('--device', default='auto'); p.add_argument('--smoke-test', action='store_true')
     p.add_argument('--evaluation-data'); p.add_argument('--evaluation-split', choices=['validation', 'test'], default='validation')
     args = parser.parse_args()
+    result: Any
     from src.training import experiments as e
     if args.command == 'show-config':
         result = read_configuration(preset=args.preset)
@@ -80,13 +97,28 @@ def main():
     elif args.command == 'train-vq':
         result = e.train_vq(args.data, args.output, model_config(args.config), args.resume)
     elif args.command == 'train-diffusion':
-        result = e.train_diffusion(args.data, args.output, model_config(args.config), args.resume)
+        result = e.train_diffusion(args.data, args.output, model_config(args.config, stage='diffusion'), args.resume)
+    elif args.command == 'train-autoencoder':
+        from src.training.representation import representation_config, train_representation
+        result = train_representation(args.data, args.output, representation_config(args.config, preset='ae_kl_aniso.yaml'), args.resume)
+    elif args.command == 'cache-representation':
+        from src.training.latent_statistics import cache_representation
+        manifest = cache_representation(args.data, args.autoencoder, args.output, args.device, args.representation_gate)
+        result = dict(manifest=str(Path(args.output)/'manifest.json'), latent_shape=manifest['latent_shape'],
+                      channel_mean=manifest['channel_mean'], channel_std=manifest['channel_std'])
+    elif args.command == 'evaluate-autoencoder':
+        from src.training.representation import evaluate_representation
+        result = evaluate_representation(args.data, args.autoencoder, args.output, args.device)
     elif args.command == 'cache-latents':
         result = e.cache_latents(args.data, args.vq, args.output, args.device)
     elif args.command == 'generate':
         result = e.generate(args.vq, args.diffusion, args.output, args.count, args.seed, args.labels, args.device,
                             sampler=args.sampler, sampling_steps=args.sampling_steps, guidance_scale=args.guidance_scale,
-                            eta=args.eta, weights=args.weights)
+                             eta=args.eta, weights=args.weights)
+    elif args.command == 'generate-balanced':
+        from src.training.conditional_generation import generate_balanced
+        result = generate_balanced(args.autoencoder, args.diffusion, args.output, args.count, args.seed, args.device,
+                                   args.sampler, args.sampling_steps, args.guidance_scale)
     elif args.command == 'evaluate-reconstruction':
         result = e.evaluate_reconstruction(args.data, args.vq, args.output, args.split, args.device,
                                             training_root=args.training_data, protocol=args.protocol)

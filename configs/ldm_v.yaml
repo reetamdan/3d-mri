@@ -1,0 +1,23 @@
+# Change only the prediction target relative to the epsilon baseline.
+shape: [128, 128, 32]
+device: cuda
+threads: 4
+seed: 43
+epochs: 100
+batch_size: 2
+steps_per_epoch: 48
+learning_rate: 0.0002
+gradient_accumulation: 1
+mixed_precision: true
+smoke_test: false
+select_best: true
+unet_base: 32
+attention: true
+attention_heads: 4
+diffusion_steps: 200
+prediction_type: v
+conditional: true
+label_dropout: 0.0
+ema_decay: null
+min_snr_gamma: null
+conditioning_mode: film
