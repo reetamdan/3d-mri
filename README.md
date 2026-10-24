@@ -323,8 +323,8 @@ python -m pytest -q --cov --cov-report=term-missing
 
 The completed project dashboard passed **187 automated tests** with **73.36% automated
 statement/branch coverage across `src/`, `app/`, `mri3d/`, and `scripts/`**.
-An empty-data clean checkout with CUDA hidden passed **178 tests**, with six
-expected skips and **71.42% coverage**.
+An empty-data clean checkout with CUDA hidden passed **181 tests**, with six
+expected skips and **72.02% coverage**.
 Mypy checks all **83 runtime source files**. Real browser checks verified the new
 results page, synchronized comparisons, live reconstruction, downloads and
 desktop/mobile layouts with no observed JavaScript errors or failed requests.

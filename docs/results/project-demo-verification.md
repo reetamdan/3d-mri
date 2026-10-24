@@ -9,17 +9,21 @@ additional representation or diffusion training.
 | Check | Result |
 |---|---|
 | Full available pytest suite, including real MRI and CUDA | **187 passed**, 203.80 seconds |
+| Clean detached checkout, no local MRI/models, CUDA hidden | **181 passed, 6 expected skips**, 125.21 seconds, **72.02% coverage** |
 | Statement/branch coverage over `src/`, `app/`, `mri3d/`, `scripts/` | **73.36%**, required floor remains 70% |
 | Mypy | **83 runtime source files**, passed |
 | Ruff | Passed |
 | Installed dependency consistency | `pip check` passed |
 | Non-editable wheel / presets outside source checkout | Passed in the full suite |
+| Separate PEP 517 isolated build | Passed with the finished dashboard source |
 
 The new tests verify model/data/report binding, changed checkpoint/image
 rejection, safe original-format study compatibility, exclusion of artificial or
 unfinished experiments, synchronized axis controls, comparison options and
 missing-local-artifact behavior. Existing NIfTI workflow tests explicitly navigate
 from the new project landing page; their prior assertions remain intact.
+The clean-checkout execution used source commit `9202dbe` in a separate worktree,
+without copying MRI/run artifacts, using the same environment with CUDA hidden.
 
 ## Actual browser acceptance
 

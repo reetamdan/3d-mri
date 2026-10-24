@@ -120,6 +120,9 @@ The final dashboard extension passed **187 tests** with **73.36% coverage**;
 mypy passed **83 runtime files**, Ruff and `pip check` passed. Existing wheel,
 CUDA, real-scan and live-baseline cases remain in that suite. The coverage
 denominator and 70% floor are unchanged.
+A separate empty-data checkout of source `9202dbe`, with CUDA hidden, passed
+**181 tests / six expected skips / 72.02% coverage**. A final PEP 517 isolated
+wheel build also passed.
 
 Real Chrome acceptance verified the new project landing page, original/VQ/KL
 comparison, seeds/cases/axes/slices, interpolation/errors, live trained KL

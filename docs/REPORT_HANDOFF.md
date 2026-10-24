@@ -30,7 +30,7 @@ are not achieved claims.
 | Medical features and memorization | Completed for six primary reconstructions and eight historical generations | `runs/AE-FEATURE-AUDIT/`; pinned MedicalNet provenance |
 | Strong conventional/downstream comparison | Framework tested; serious new synthetic comparison not run | `src/training/downstream_fair.py`; earlier negative probe below |
 | Project dashboard/browser verification | Implemented and browser-verified | `app/project_results.py`; `runs/PROJECT-DEMO-20261024/browser-report.json`; `docs/PROJECT_DEMO.md` |
-| Final cleanup and GitHub publication | Reviewed cleanup complete; final publication being verified | `docs/cleanup-review.md`; research evidence preserved |
+| Final cleanup and GitHub publication | Reviewed cleanup complete; source commits and live GitHub checks linked below | `docs/cleanup-review.md`; research evidence preserved |
 
 The original research scope is not reduced to a successful-generation claim.
 Unmet gates and unavailable data are recorded explicitly rather than running
@@ -172,6 +172,9 @@ statement/branch coverage in 203.80 s. Mypy checked **83 source files**; Ruff,
 dependency consistency and isolated non-editable wheel/preset tests passed.
 See `docs/results/project-demo-verification.md`. Browser checks are separate
 evidence, not included in automated-suite coverage.
+A separate empty-data checkout of source `9202dbe`, with CUDA hidden, passed
+**181 tests / six expected skips / 72.02% coverage**, in 125.21 s. The final
+dashboard source also passed a separate PEP 517 isolated build.
 
 ### Cleanup
 
@@ -179,3 +182,18 @@ After the working demo and final checks passed, reviewed generated build/test/
 checker/coverage outputs and two completed one-off launch wrappers were removed.
 `docs/cleanup-review.md` records each decision. Production/research code, tests,
 datasets, models, useful figures and negative results remain available.
+
+### Versioned source and GitHub references
+
+- Completed dashboard/report source: commit `9202dbe`; subsequent documentation
+  commits record clean-checkout verification and finalization.
+- Main project: <https://github.com/reetamdan/3d-mri/tree/main>.
+- Research history: <https://github.com/reetamdan/3d-mri/tree/research/ae-ldm-v2>.
+- Current hosted checks: <https://github.com/reetamdan/3d-mri/actions/workflows/tests.yml>.
+- Read the exact uploaded revision with `git rev-parse origin/main`; read current
+  CI with `gh run list --branch main --workflow tests.yml --limit 1`.
+
+These links identify the versioned source and current CI rather than freezing a
+potentially stale badge result into a report draft. Cite the commit/check run
+used when submitting the final report. MRI datasets, weights and MRI screenshots
+stay in the documented local artifact folders rather than the source upload.
