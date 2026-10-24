@@ -72,6 +72,7 @@ def test_real_export_reproducibility_and_tensor_roundtrip(tmp_path):
 
 def test_real_dashboard_all_scans_and_controls():
     app = AppTest.from_file(str(ROOT / 'app/streamlit_app.py')).run(timeout=60)
+    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=60)
     app.sidebar.text_input[0].set_value(str(ROOT / 'configs/real-scans.yaml')).run(timeout=60)
     app.sidebar.button[0].click().run(timeout=60)
     assert not app.exception

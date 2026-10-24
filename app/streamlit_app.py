@@ -34,8 +34,19 @@ h1 {font-weight:650; letter-spacing:-1.2px}
 }
 </style>''', unsafe_allow_html=True)
 st.sidebar.markdown('## ◈ MRI RESEARCH')
-st.sidebar.caption('MEDICAL DIFFUSION / DATA · MODELS · EVALUATION')
-page = st.sidebar.radio('Workspace', ['Dataset Overview', 'MRI Viewer', 'Preprocessing', 'Intensity Analysis', 'Dataset Quality', 'Export', 'MRNet Dataset', 'Model Experiments'])
+st.sidebar.caption('KNEE MRI / DATA · RECONSTRUCTION · DIFFUSION')
+page = st.sidebar.radio('Workspace', ['Project Results', 'Dataset Overview', 'MRI Viewer', 'Preprocessing', 'Intensity Analysis', 'Dataset Quality', 'Export', 'MRNet Dataset', 'Model Experiments'])
+with st.sidebar.expander('Technical terms, simply explained'):
+    from app.glossary import TERMS
+    for term in ('Reconstruction', 'Generation', 'Latent representation', 'VQ-VAE', 'KL autoencoder', 'PSNR', 'SSIM', 'Conditioning'):
+        st.markdown(f'**{term}** — {TERMS[term]}')
+if page == 'Project Results':
+    from app.project_results import project_results_page
+    st.caption('3D MEDICAL IMAGING / PROJECT RESULTS')
+    st.title('3D Knee MRI')
+    project_results_page(ROOT)
+    st.sidebar.caption('Research prototype · measured results, not clinical diagnosis.')
+    st.stop()
 config_path = st.sidebar.text_input('Configuration file', str(ROOT/'configs/config.yaml')
                                   if (ROOT/'configs/config.yaml').is_file() else '',
                                   help='Leave blank for the bundled preprocessing preset in the current workspace.')

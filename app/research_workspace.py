@@ -10,6 +10,7 @@ from src.visualization.plots import histogram
 from src.utils.integrity import confined_path, generated_volume
 from src.utils.artifacts import resolve_reference
 from app.artifact_cache import verified_hash, read_json, dataset_fingerprint, clear_verification_cache
+from app.glossary import TERMS
 
 
 def interactive_manifest(folder, expected):
@@ -127,6 +128,7 @@ def mrnet_page(root):
 
 
 def experiments_page(root):
+    st.info('For the improved VQ/KL comparison and synchronized MRI images, open **Project Results** in the sidebar. This page contains the preserved diffusion prototype.')
     st.caption('Only completed research runs with verified checkpoint checksums appear here. Test artifacts are excluded.')
     st.markdown('**Pipeline:** MRI → VQ encoder/codebook → latent DDPM → VQ decoder → evaluation → augmentation comparison')
     st.caption('MRNet classification uses exam labels. Segmentation Dice requires separately supplied aligned masks.')
@@ -149,8 +151,8 @@ def experiments_page(root):
         st.caption(evidence['status'])
         cols = st.columns(4)
         cols[0].metric('Training / validation exams', f'{evidence["data"]["train_count"]} / {evidence["data"]["validation_count"]}')
-        cols[1].metric('Held-out VQ SSIM', f'{evidence["reconstruction"]["ssim"]:.4f}')
-        cols[2].metric('Held-out VQ PSNR', f'{evidence["reconstruction"]["psnr"]:.2f} dB')
+        cols[1].metric('Validation VQ SSIM', f'{evidence["reconstruction"]["ssim"]:.4f}', help=TERMS['SSIM'])
+        cols[2].metric('Validation VQ PSNR', f'{evidence["reconstruction"]["psnr"]:.2f} dB', help=TERMS['PSNR'])
         cols[3].metric('VQ / diffusion updates', f'{evidence["vq"]["optimizer_steps"]} / {evidence["diffusion"]["optimizer_steps"]}')
         st.download_button('Download M3/M4 evidence', evidence_path.read_bytes(), 'evidence.json')
     summary_path = run/'summary.json'
@@ -177,6 +179,7 @@ def experiments_page(root):
                 or manifest['diffusion_sha256'] != verified_hash(diffusion_checkpoint)):
             raise ValueError('Generated samples do not match the selected model checkpoints')
         st.subheader('Generated volumes')
+        st.caption(TERMS['Generation']+' Current saved samples remain experimental; coherent anatomy and pathology fidelity are not established.')
         if manifest['smoke_test']:
             st.error('This generated output is test-only and cannot be displayed as a research result.')
             return
@@ -197,7 +200,7 @@ def experiments_page(root):
             st.caption('Runs the selected diffusion and VQ checkpoints now. Each request writes a fresh, traceable output folder.')
             seed = int(st.number_input('Sampling seed', min_value=0, max_value=2147483647, value=2026))
             sampling = manifest.get('sampling', {})
-            method = st.selectbox('Sampling method', ['ddpm', 'ddim'], index=int(sampling.get('method') == 'ddim'))
+            method = st.selectbox('Sampling method', ['ddpm', 'ddim'], index=int(sampling.get('method') == 'ddim'), help=TERMS['DDIM'])
             training_steps = int(sampling.get('training_steps', 200))
             sampling_steps = int(st.number_input('DDIM sampling steps', 1, training_steps, min(50, training_steps))) if method == 'ddim' else None
             guidance_trained = sampling.get('classifier_free_guidance_trained', sampling.get('guidance_scale', 1.) != 1.)

@@ -2,6 +2,12 @@
 
 **Assessment window:** October 26–30, 2026 · **Weight:** 3 marks
 
+**Current presentation:** start with **Project Results** and the improved KL
+reconstruction comparison. The updated five-minute walkthrough is
+[`docs/PROJECT_DEMO.md`](../PROJECT_DEMO.md), with report-writing material in
+[`docs/REPORT_HANDOFF.md`](../REPORT_HANDOFF.md). This page retains the original
+M4 VQ/diffusion baseline demonstration and its artifact map.
+
 ## 1. Launch the trained product
 
 From the project root in PowerShell:
@@ -119,7 +125,8 @@ silently claimed as part of a run with zero adversarial weight.
 
 **How is leakage avoided?** Official MRNet splits are preserved; source and
 processed metadata record their assignments. The released arrays do not expose
-patient IDs, so the adapter relies on Stanford's published patient-disjoint policy.
+reliable patient IDs. Identity/content overlap is audited, but patient-disjointness
+cannot be independently verified from these arrays and is not claimed.
 
 **Why not Dice?** MRNet supplies exam labels, not aligned segmentation masks.
 Reconstruction and generation use the appropriate available metrics.

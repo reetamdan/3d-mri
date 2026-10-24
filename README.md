@@ -101,6 +101,10 @@ python -m streamlit run app/streamlit_app.py
 ```
 
 Open **http://127.0.0.1:8501**. A fresh clone starts with an empty dataset state.
+The **Project Results** landing page presents recorded experiment numbers and,
+when local study artifacts are available, synchronized original/VQ/KL MRI images,
+training curves, live trained reconstruction, error maps and plain-language
+technical help. Follow the [five-minute project demo](docs/PROJECT_DEMO.md).
 Datasets, virtual environments, trained weights, and generated run folders are
 local artifacts; they are excluded from version control. The app does not
 download data on startup.
@@ -317,18 +321,21 @@ python -m mypy
 python -m pytest -q --cov --cov-report=term-missing
 ```
 
-The representation-study extension passed **184 automated tests** with **72.88% automated
+The completed project dashboard passed **187 automated tests** with **73.36% automated
 statement/branch coverage across `src/`, `app/`, `mri3d/`, and `scripts/`**.
 An empty-data clean checkout with CUDA hidden passed **178 tests**, with six
 expected skips and **71.42% coverage**.
-Mypy checks all **81 runtime source files**.
+Mypy checks all **83 runtime source files**. Real browser checks verified the new
+results page, synchronized comparisons, live reconstruction, downloads and
+desktop/mobile layouts with no observed JavaScript errors or failed requests.
 Tests include orchestration/resume,
 protocol reservation, missing-hash overlap rejection, persistent sample browsing,
 cache invalidation, an isolated wheel install, and actual CUDA/live-checkpoint
 inference. The live test writes into a temporary copy of its run.
 
 See the [engineering verification record](docs/engineering-verification.md) for
-the current scope, the [output/usefulness assessment](docs/results/output-verification.md)
+the current scope, the [completed dashboard verification](docs/results/project-demo-verification.md),
+the [output/usefulness assessment](docs/results/output-verification.md)
 for independently recomputed M4 metrics and the completed augmentation probe, and
 the [original UI record](docs/ui-verification.md) for
 historical browser checks. On a fresh clone, tests requiring downloaded samples or
@@ -352,6 +359,8 @@ their ignored output directories.
 ## Documentation
 
 - [College M1–M4 submission pack](docs/milestones/README.md)
+- [Current project demo and browser verification](docs/PROJECT_DEMO.md)
+- [Report-writing handoff, figures and evidence status](docs/REPORT_HANDOFF.md)
 - [M4 demonstration guide](docs/milestones/m4-demo.md)
 - [Presentation outline](docs/milestones/presentation.md)
 - [Verification record](docs/milestones/verification.md)

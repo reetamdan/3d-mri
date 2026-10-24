@@ -363,6 +363,13 @@ A fresh detached checkout without local data/models and with CUDA hidden passed
 a separate PEP 517 isolated wheel build also passed. Full details and exact scope
 are in `docs/engineering-verification.md`.
 
+The subsequent completed presentation pass exposes these actual VQ/KL images,
+same-slice comparisons, curves and measured tables in Streamlit. It adds inline
+one-line explanations and a downloadable report handoff. Final full-suite results
+are **187 passed / 73.36% coverage**, with mypy checking 83 source files; real
+Chrome browser verification is recorded in `docs/results/project-demo-verification.md`.
+No new scientific training result is implied by this presentation pass.
+
 ## Reproduce the frozen screening plan
 
 These commands assume the processed 96/24 cohort and historical VQ checkpoint

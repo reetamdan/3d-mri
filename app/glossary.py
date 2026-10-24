@@ -1,0 +1,28 @@
+"""Short, consistent explanations for the project presentation and existing tools."""
+
+TERMS = {
+    'Reconstruction': 'Rebuilds an existing MRI after compressing it; this is different from generating a new scan.',
+    'Generation': 'Creates a new volume from noise rather than reconstructing an input scan.',
+    'Latent representation': 'A compact internal representation of the MRI used by the model.',
+    'VQ-VAE': 'Compresses MRI using a learned collection of discrete codebook entries.',
+    'KL autoencoder': 'Learns a continuous probabilistic representation from which the MRI is reconstructed.',
+    'Anisotropic compression': 'Compresses the acquired slice direction less than the two image-plane directions.',
+    'Latent diffusion': 'Generates an MRI by repeatedly denoising a compact representation and decoding it.',
+    'Conditioning': 'Requests specified labels; it does not confirm that generated pathology is valid.',
+    'Classifier-free guidance': 'Adjusts how strongly generation follows its requested condition.',
+    'PSNR': 'Measures reconstruction error in decibels; higher means closer pixel intensities.',
+    'SSIM': 'Measures structural image similarity; higher is better, but does not prove anatomical validity.',
+    'MS-SSIM': 'Measures image structure at multiple spatial scales.',
+    'Gradient ratio': 'Compares edge energy with the original; 1 means equal energy, not verified anatomy.',
+    'High-frequency ratio': 'Compares fine-texture energy with the original; both detail and noise affect it.',
+    'Seed': 'A fixed random starting value used to make an experiment repeatable.',
+    'Epoch': 'One planned training cycle over the dataset.',
+    'Optimizer update': 'One adjustment of the model weights during training.',
+    'Validation': 'Cases used to select and compare models; these are not an independent final test.',
+    'VRAM': 'GPU memory used to hold model parameters and working tensors.',
+    'AUROC': 'Measures ranking of positive versus negative cases across thresholds; .5 is chance ranking.',
+    'AUPRC': 'Summarizes precision and recall; its reference level depends on how common positives are.',
+    'Checkpoint': 'Saved model weights together with the information needed to identify or resume a run.',
+    'DDIM': 'A diffusion sampling method that can use fewer denoising steps.',
+    'Min-SNR': 'Changes the weight of training timesteps according to their signal-to-noise ratio.',
+}

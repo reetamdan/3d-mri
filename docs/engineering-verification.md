@@ -113,3 +113,21 @@ worktree with no copied data/run outputs, and the same installed research-enable
 Python environment with `CUDA_VISIBLE_DEVICES=''`. It verifies offline data/run
 independence locally; the Linux/Windows hosted jobs additionally install the CPU
 PyTorch wheel from scratch.
+
+## Completed project presentation — 25 October 2026
+
+The final dashboard extension passed **187 tests** with **73.36% coverage**;
+mypy passed **83 runtime files**, Ruff and `pip check` passed. Existing wheel,
+CUDA, real-scan and live-baseline cases remain in that suite. The coverage
+denominator and 70% floor are unchanged.
+
+Real Chrome acceptance verified the new project landing page, original/VQ/KL
+comparison, seeds/cases/axes/slices, interpolation/errors, live trained KL
+reconstruction, result/report downloads, preserved prototype navigation, and
+900/390 px layouts. Browser exceptions, console errors and failed requests were
+zero. First-load versus cached inference were measured separately.
+
+See `docs/results/project-demo-verification.md` for full scope and local evidence,
+`docs/PROJECT_DEMO.md` for the demonstration and `docs/REPORT_HANDOFF.md` for
+the maintained report-writing handoff. These browser executions are separate
+from pytest coverage.

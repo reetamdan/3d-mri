@@ -10,7 +10,8 @@ APP = str(Path(__file__).resolve().parents[1] / 'app/streamlit_app.py')
 def test_empty_app_launch():
     app = AppTest.from_file(APP).run(timeout=30)
     assert not app.exception
-    assert app.title[0].value == 'Dataset Overview'
+    assert app.title[0].value == '3D Knee MRI'
+    assert any('Technical terms' in e.label for e in app.sidebar.expander)
 
 
 def test_research_workspace_pages():
@@ -27,6 +28,7 @@ def test_dashboard_workflow(config, nifti, tmp_path):
     path = tmp_path / 'config.yaml'
     path.write_text(yaml.safe_dump(config))
     app = AppTest.from_file(APP).run(timeout=30)
+    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=30)
     app.sidebar.text_input[0].set_value(str(path)).run()
     app.sidebar.button[0].click().run(timeout=30)
     assert not app.exception
@@ -62,6 +64,7 @@ def test_valid_config_values_outside_default_preview_bounds(config, nifti, tmp_p
     path = tmp_path/'config.yaml'
     path.write_text(yaml.safe_dump(config))
     app = AppTest.from_file(APP).run(timeout=30)
+    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=30)
     app.sidebar.text_input[0].set_value(str(path)).run(timeout=30)
     app.sidebar.button[0].click().run(timeout=30)
     app.sidebar.radio[0].set_value('Preprocessing').run(timeout=30)
@@ -82,6 +85,7 @@ def test_failed_reindex_clears_previous_dataset_preview_and_export(config, nifti
     path = tmp_path/'config.yaml'
     path.write_text(yaml.safe_dump(config))
     app = AppTest.from_file(APP).run(timeout=30)
+    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=30)
     app.sidebar.text_input[0].set_value(str(path)).run(timeout=30)
     app.sidebar.button[0].click().run(timeout=30)
     app.sidebar.radio[0].set_value('Preprocessing').run(timeout=30)
