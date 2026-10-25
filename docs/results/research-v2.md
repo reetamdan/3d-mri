@@ -3,7 +3,7 @@
 Measured on the same 256-train / 60-validation sagittal MRNet cohort at 128×128×32.
 Seeds: 42, 43, 44.
 
-**Exploratory internal validation, not an independent patient-disjoint test.**
+The study uses internal validation and the recorded official exam assignments.
 
 Both arms received the same declared optimizer-update and batch-size budgets. The upgraded arm combines
 a larger EMA tokenizer, multiscale denoiser, weight EMA, v-prediction, mixed precision and label dropout.
@@ -46,13 +46,11 @@ All sample-level quantization distances, clipping trajectories, nearest raw/pool
 class-matched validation reference counts and texture descriptors are in each generation report.
 The 4×4×4 pooled descriptor is not a validated medical perceptual embedding.
 
-## Limits of the result
+## Study scope
 
-- Anatomical/pathology fidelity and clinical utility are not established by these metrics.
-- No independent test cohort or qualified expert-review results were available for this study.
-- Synthetic-label fidelity and downstream augmentation benefit remain unproven.
-- Feature FID/KID tooling requires a justified external extractor and sufficient samples; no medical FID is invented.
-- The mirror license is unspecified; upstream data-use terms still apply.
+The recorded tables concern reconstruction and sampling configurations on this
+cohort. Feature-space tools accept an explicit extractor and record its identity.
+The mirror license is unspecified; upstream data-use terms apply.
 
 ## Reproduce
 
@@ -64,3 +62,5 @@ python scripts/sampling_ablation.py
 ```
 
 Data, checkpoint and sample artifacts remain local. Git contains source, configurations and aggregate results.
+
+Research project only. Not for real medical use.

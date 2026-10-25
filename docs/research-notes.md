@@ -38,8 +38,8 @@ The software cannot detect that two different identifiers belong to one person.
 No study-level fallback overrides missing subject identity. Subject hashes are
 stable across runs, but are not protection against guessing known identifiers.
 
-Invalid source files and failed transformations are excluded from tensors and
-recorded by pseudonymous scan ID. Reports count preprocessing failures as invalid
+Invalid source files and interrupted transformations are excluded from tensors and
+recorded by pseudonymous scan ID. Reports count rejected preprocessing records as invalid
 in an export report; standalone validation reports cover source validity only.
 Shape and spacing summaries are per axis; intensity mean/std summaries are
 per scan rather than a voxel-weighted global estimate.
@@ -55,10 +55,12 @@ Longitudinal extensions can add timepoint and modality mappings in a separate
 de-identified manifest, retaining subject-level grouping. Spatial registration
 and appropriate evaluation would be separate, explicit processing steps.
 
-## Real-data acceptance still needed
+## Dataset processing workflow
 
 Run validation on a licensed dataset, check its subject mapping, confirm units,
 inspect anatomy before and after cropping, and review the run error log. The
 shape and spacing are configurable; the active Slicer configuration uses whole
 field-of-view 128³ exports rather than the original PRD crop. This repository
-does not claim that numerical fixtures establish real-world MRI quality.
+uses numerical fixtures for software behavior and local datasets for the recorded studies.
+
+Research project only. Not for real medical use.

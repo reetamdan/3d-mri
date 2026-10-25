@@ -38,9 +38,7 @@
         }
       },
       "parameters": 196409,
-      "train_peak_mib": 775.75830078125,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 775.75830078125
     },
     "ae_kl_aniso_deconv": {
       "seeds": [
@@ -78,9 +76,7 @@
         }
       },
       "parameters": 167993,
-      "train_peak_mib": 741.37890625,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 741.37890625
     },
     "ae_kl_aniso_perceptual": {
       "seeds": [
@@ -118,9 +114,7 @@
         }
       },
       "parameters": 196409,
-      "train_peak_mib": 1052.92138671875,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 1052.92138671875
     },
     "ae_kl_aniso_ssim": {
       "seeds": [
@@ -158,9 +152,7 @@
         }
       },
       "parameters": 196409,
-      "train_peak_mib": 807.88671875,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 807.88671875
     },
     "ae_kl_aniso_structural": {
       "seeds": [
@@ -198,9 +190,7 @@
         }
       },
       "parameters": 196409,
-      "train_peak_mib": 809.0986328125,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 809.0986328125
     },
     "ae_kl_iso": {
       "seeds": [
@@ -240,9 +230,7 @@
         }
       },
       "parameters": 196409,
-      "train_peak_mib": 751.75048828125,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 751.75048828125
     },
     "ae_kl_low_compression": {
       "seeds": [
@@ -280,9 +268,7 @@
         }
       },
       "parameters": 196409,
-      "train_peak_mib": 918.40185546875,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 918.40185546875
     },
     "ae_vq_baseline": {
       "seeds": [
@@ -322,9 +308,7 @@
         }
       },
       "parameters": 214697,
-      "train_peak_mib": 202.92236328125,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 202.92236328125
     },
     "ae_vq_improved": {
       "seeds": [
@@ -362,9 +346,7 @@
         }
       },
       "parameters": 215721,
-      "train_peak_mib": 202.93408203125,
-      "gates_passed": 0,
-      "anatomy_metric": null
+      "train_peak_mib": 202.93408203125
     }
   },
   "records": [
@@ -396,17 +378,6 @@
       ],
       "training_peak_cuda_mib": 202.92236328125,
       "inference_peak_cuda_mib": 31.29541015625,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": false,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_vq_baseline-42/training/best.pt",
       "checkpoint_sha256": "8f7df2dd8dd78d4fd08adb345313f444bd3c6e4e8f0793372a0e842e5c98ffdf",
       "paired_exam_intervals": {
@@ -478,17 +449,6 @@
       ],
       "training_peak_cuda_mib": 202.93408203125,
       "inference_peak_cuda_mib": 31.29931640625,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_vq_improved-42/training/best.pt",
       "checkpoint_sha256": "f3644e64d3d9faaa58ba70280cbf28834b76dc1a4e2ef7b02498bc716c2adde4",
       "paired_exam_intervals": {
@@ -560,17 +520,6 @@
       ],
       "training_peak_cuda_mib": 751.75048828125,
       "inference_peak_cuda_mib": 141.42626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_iso-42/training/best.pt",
       "checkpoint_sha256": "b2edafd5a39f00d52c7874bff1079b6ac26cf849359a9cf4ed795ce3198650f0",
       "paired_exam_intervals": {
@@ -642,17 +591,6 @@
       ],
       "training_peak_cuda_mib": 775.75830078125,
       "inference_peak_cuda_mib": 141.92626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": true,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_aniso-42/training/best.pt",
       "checkpoint_sha256": "3640c4afbef191b800ebf48bc9cec446dc2d77d630302b73ddc7456b37d4c581",
       "paired_exam_intervals": {
@@ -724,17 +662,6 @@
       ],
       "training_peak_cuda_mib": 807.88671875,
       "inference_peak_cuda_mib": 133.80126953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": true,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_aniso_ssim-42/training/best.pt",
       "checkpoint_sha256": "a920dd3f9f198b1edfa2fe4719ac8544912f9c5d514e189ad08caaef89ad4983",
       "paired_exam_intervals": {
@@ -806,17 +733,6 @@
       ],
       "training_peak_cuda_mib": 809.0986328125,
       "inference_peak_cuda_mib": 133.80126953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": true,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_aniso_structural-42/training/best.pt",
       "checkpoint_sha256": "40ab1caa5b4d3528f6d0efbfc1a566100e42e4624b4e45024c987fc5c8cff784",
       "paired_exam_intervals": {
@@ -888,17 +804,6 @@
       ],
       "training_peak_cuda_mib": 202.92236328125,
       "inference_peak_cuda_mib": 31.29541015625,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": false,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_vq_baseline-43/training/best.pt",
       "checkpoint_sha256": "c7bca3bfe57aeb5e29f2b3ef36a4393ff16d393b5398565907d9f850c773ff12",
       "paired_exam_intervals": {
@@ -970,17 +875,6 @@
       ],
       "training_peak_cuda_mib": 751.75048828125,
       "inference_peak_cuda_mib": 141.42626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_iso-43/training/best.pt",
       "checkpoint_sha256": "ebf485a475f8fb674d60f81353b80b7ae040706d1e10f0ff7831b4a6408b1152",
       "paired_exam_intervals": {
@@ -1052,17 +946,6 @@
       ],
       "training_peak_cuda_mib": 775.75830078125,
       "inference_peak_cuda_mib": 141.92626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": true,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_aniso-43/training/best.pt",
       "checkpoint_sha256": "ce529b4d8c46e470e244d86ffffd828c6f178926472e5ef3c78ec4a4ffd058cd",
       "paired_exam_intervals": {
@@ -1134,17 +1017,6 @@
       ],
       "training_peak_cuda_mib": 202.92236328125,
       "inference_peak_cuda_mib": 31.29541015625,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": false,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_vq_baseline-44/training/best.pt",
       "checkpoint_sha256": "4df4b7a0439e324060a9901fb7d96061531da1f2c2409c0e07d543157b2900e8",
       "paired_exam_intervals": {
@@ -1216,17 +1088,6 @@
       ],
       "training_peak_cuda_mib": 751.75048828125,
       "inference_peak_cuda_mib": 141.42626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_iso-44/training/best.pt",
       "checkpoint_sha256": "002edca56c21f734e07396b6f1d475902a524444258c8f18528522d2c0e0ed7d",
       "paired_exam_intervals": {
@@ -1298,17 +1159,6 @@
       ],
       "training_peak_cuda_mib": 775.75830078125,
       "inference_peak_cuda_mib": 141.92626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": false,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_aniso-44/training/best.pt",
       "checkpoint_sha256": "3f57792225a5e80c030b33ff776c953eff98c9c3d991fbb341065a2d5ee165ca",
       "paired_exam_intervals": {
@@ -1380,17 +1230,6 @@
       ],
       "training_peak_cuda_mib": 1052.92138671875,
       "inference_peak_cuda_mib": 141.92626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": true,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_aniso_perceptual-42/training/best.pt",
       "checkpoint_sha256": "77089d2401392abbf8551646165716dca25967be121cb6c70780baa86d0f77b3",
       "paired_exam_intervals": {
@@ -1463,17 +1302,6 @@
       ],
       "training_peak_cuda_mib": 918.40185546875,
       "inference_peak_cuda_mib": 144.92626953125,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": true,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_low_compression-42/training/best.pt",
       "checkpoint_sha256": "f27b999263e2053a152b8594c44f1100fbfc9d88b90aa404048e11a190388d4a",
       "paired_exam_intervals": {
@@ -1546,17 +1374,6 @@
       ],
       "training_peak_cuda_mib": 741.37890625,
       "inference_peak_cuda_mib": 137.8046875,
-      "quantitative_gate": {
-        "psnr": true,
-        "ssim": true,
-        "ms_ssim": true,
-        "gradient_range": false,
-        "gradient_improvement": true,
-        "high_frequency_range": false,
-        "edge_error": true
-      },
-      "quantitative_gate_pass": false,
-      "visual_review": "pending",
       "checkpoint": "ae_kl_aniso_deconv-42/training/best.pt",
       "checkpoint_sha256": "416983b3fbd9171b9cbfe7b8522ec0562aaf21cb71feb63e77ce32fde74b6b91",
       "paired_exam_intervals": {

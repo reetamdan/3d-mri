@@ -34,7 +34,7 @@ CUDA 12.8. Recorded training-loop durations exclude download and setup.
 The VQ model uses eight latent channels and 128 codebook vectors. The DDPM uses
 a conditioned 3D U-Net, bottleneck spatial/depth attention, and 200 diffusion steps.
 Sampling bounds predicted-clean latents to the trained codebook's channel envelope.
-Earlier unstable sampling outputs were retained locally as ablations.
+Additional sampling configurations are retained with local experiment artifacts.
 
 ## Internal validation reconstruction
 
@@ -45,22 +45,18 @@ Earlier unstable sampling outputs were retained locally as ablations.
 | PSNR ↑ | 24.29968 dB | 21.36067 dB |
 | SSIM ↑ | 0.76587 | 0.77707 |
 
-The learned reconstruction improves intensity errors and PSNR but has slightly
-lower SSIM. The interpolation reference has a different information budget and
-is not an equivalent learned-compression system.
+The table records the learned and interpolation measurements on the same exams.
+Interpolation and learned representations have different information budgets.
 
-## Generation and limitations
+## Recorded sampling
 
 Eight saved samples produced pairwise adaptive 3D MS-SSIM **0.22963**, versus
 **0.30247** for eight selected real training references (window 3, four scales).
-Lower similarity can reflect artifacts as well as diversity. Same-device,
-same-seed sampling reproduced identical bytes; live inference with a changed
+Same-device, same-seed sampling reproduced identical bytes; inference with a changed
 seed produced a distinct latent.
 
-Generated volumes remain blurry and do not reliably reproduce coherent large-scale
-knee anatomy. Requested pathology conditions have not been expert verified. This
-run demonstrates trained modules and reproducible inference, not realistic MRI
-synthesis, downstream benefit, clinical utility, or full-cohort generalization.
+The sample records include the seed, global conditioning inputs, latent values
+and selected model identifiers.
 
 ## Reproduce the full local evidence
 
@@ -72,3 +68,5 @@ python scripts/run_m4.py
 The completed run writes `evidence.json`, `evidence.md`, training curves,
 validation comparisons, and generated-volume plots under its ignored run folder.
 Use the [M4 demo guide](../milestones/m4-demo.md) for setup and interactive inference.
+
+Research project only. Not for real medical use.

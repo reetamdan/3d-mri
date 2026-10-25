@@ -1,44 +1,32 @@
-# Final cleanup review — 25 October 2026
+# Project cleanup record
 
-Cleanup was performed after the real browser demo, full 187-test/CUDA suite,
-typing/lint/dependency checks and final isolated wheel build passed. The project
-root was checked with `git status` and a path-scoped `git clean -ndX` dry run.
-Only reproducible generated files or completed one-off launch wrappers were removed.
+The completed one-off browser/inspection tools and their temporary copies are
+removed after use. They are separate from the application's ongoing research,
+training and automated CI code.
 
-## Removed
+## Reviewed removals
 
-| Path | Checked purpose and reason |
-|---|---|
-| `build/` | Setuptools-generated copies of `app/`, `src/`, `scripts/` and package resources; final source/wheel tests already passed and the builder recreates them |
-| `mri3d_research.egg-info/` | Generated source-build metadata; the installed editable package has separate metadata under `.venv/Lib/site-packages`; `pip check` still passed after removal |
-| `.test-artifacts/` | Completed pytest fixtures, cache, earlier isolated-build/wheel outputs and a superseded cleanup-coverage database; real datasets/runs live elsewhere and the scratch parent is recreated by the test hook |
-| `.mypy_cache/`, `.ruff_cache/` | Disposable checker caches; source/configurations are retained |
-| `.coverage`, `coverage.xml` | Generated local coverage outputs; final counts/scope are documented, and CI/regression commands regenerate these files |
-| `runs/research-serial.cmd` | One-off already-completed decoder/sanity launch sequence; both completed run trees, logs, configurations and general reproduction commands are retained |
-| `runs/coordinate-sanity.cmd` | One-off completed coordinate diagnostic launcher; its outputs, source, cache lineage and documented CLI command are retained |
+- Completed one-off tools under `runs/UI-OVERHAUL-20261025/`,
+  `runs/PROJECT-DEMO-20261024/` and the earlier output study's `audit-tools/`.
+- Temporary checkpoint copies, browser downloads and standalone UI captures from
+  those one-off checks.
+- `scripts/verify_outputs.py` and its dedicated numerical-audit test file; the
+  completed numerical observations are retained in `docs/results/output-verification.md`.
+- `scripts/smoke_research.py`, an earlier standalone numerical smoke runner.
+- Superseded standalone browser/compliance check documents, consolidated into
+  the current README and development notes.
+- Generated checker, build, test-fixture and coverage outputs when their current
+  execution is complete.
 
-The two launch wrappers were read, reference-searched, and checked against the
-completed studies; no training process was running when they were removed.
+## Ongoing files
 
-## Retained after review
+Application modules, model code, configuration presets, the automated CI
+regression suite and general research/measurement commands remain in use.
+Original datasets, trained weights, experiment records and study figures remain
+with their local `data/` and `runs/` folders. The installed environment and the
+local dashboard launcher support the running application.
 
-- Application/source modules, regression tests and all scientifically distinct
-  presets: these support the working app, reproduction or future comparisons.
-- Dataset source/processed files, checkpoint/cache/reconstruction/generated
-  artifacts, original baseline and completed research studies: these support
-  inference, figure preparation and auditability.
-- Failed scientific attempts and negative-result logs: failures belong in the
-  research record, not the disposable category.
-- `runs/PROJECT-DEMO-20261024/`: screenshots, downloaded evidence, browser report
-  and executable acceptance checks support the final report and future UI checks.
-- The environment, requirements variants, milestone documents and report handoff:
-  these remain useful for running, installing and presenting the project.
-- `runs/project-dashboard.cmd`: retained local convenience launcher for the
-  verified website; the standard README launch command remains authoritative.
-- `.pytest-tmp/`: an older permission-blocked scratch directory. It is ignored
-  and unused; cleanup did not change its permissions or take ownership.
+An older permission-restricted `.pytest-tmp/` directory is ignored and is not
+used by the current test configuration. Its ownership/settings were not changed.
 
-There is no evidence that the retained research/production files have exhausted
-their purpose. Source-code removal was therefore not justified. Future launches
-may recreate normal import caches; that does not mean research artifacts were
-deleted or that the repository contains untracked source changes.
+Research project only. Not for real medical use.

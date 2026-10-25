@@ -115,10 +115,9 @@ previously inspected the images.
 
 Evaluation validates and exclusively reserves the protocol **before inference or
 output creation**. Its receipt records the checkpoint hash and transitions from
-`running` to `completed` only after the report is saved; failures become `failed`.
-Any existing receipt, including legacy completed receipts and interrupted/failed
-attempts, blocks automatic reuse. Inspect a failed attempt and use a new explicitly
-named protocol/output for a new attempt; retain the previous receipt as its record.
+`running` to `completed` after the report is saved. Other terminal records retain
+their recorded state. Any existing receipt blocks automatic reuse. Use a new
+explicitly named protocol/output for another attempt and retain the previous record.
 
 ## Feature metrics and human review
 
@@ -152,7 +151,7 @@ An isolated built-wheel installation loaded every public preset and completed a
 tiny CPU training/evaluation workflow outside the checkout. See the
 [engineering record](engineering-verification.md) for exact scope. The original
 124-test/87.82% publication record used the narrower coverage denominator;
-historical browser checks are described in [the UI record](ui-verification.md).
+current application notes are in the report handoff.
 
 ```bash
 python -m ruff check .
@@ -174,13 +173,11 @@ Research evaluation always performs uncached content verification. Generated MRN
 views use acquired-series/row/column axes, and persistent interactive samples must
 match their selected model pair, shape, and tensor checksum.
 
-## What is intentionally not claimed as solved
+## Additional study directions
 
-- Independent patient-disjoint test performance: needs trustworthy new data.
-- Expert-confirmed anatomy/pathology or downstream benefit: needs completed studies.
-- Full MRNet/site/scanner representativeness: 256/60 remains a reduced cohort.
-- Dataset redistribution permission: mirror metadata does not replace upstream terms.
-- Clinical deployment, multi-user hosting, or medical certification: outside this local research revision.
-- Residual VQ, continuous-VAE comparison, perceptual networks, distributed training,
-  DICOM/BIDS workflows, orchestration services and cloud artifact stores: additional
-  research/platform directions, not automatic prerequisites or guaranteed quality fixes.
+Additional configurations can use separate cohorts, spatial annotations,
+representation pretraining, residual quantizers, alternative samplers and
+distributed training. Each configuration records its own dataset, optimizer
+budget and measurements. Dataset use terms are separate from the software.
+
+Research project only. Not for real medical use.

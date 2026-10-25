@@ -7,17 +7,28 @@ from streamlit.testing.v1 import AppTest
 APP = str(Path(__file__).resolve().parents[1] / 'app/streamlit_app.py')
 
 
+def workbench(app, page='Dataset Overview'):
+    app.switch_page('pages/workbench.py').run(timeout=30)
+    app.selectbox(key='data_tool').select(page).run(timeout=30)
+    return app
+
+
+def configure(app, path):
+    next(t for t in app.text_input if t.label == 'Configuration file').set_value(str(path)).run(timeout=30)
+    next(b for b in app.button if b.label == 'Index & validate dataset').click().run(timeout=30)
+
+
 def test_empty_app_launch():
     app = AppTest.from_file(APP).run(timeout=30)
     assert not app.exception
     assert app.title[0].value == '3D Knee MRI'
-    assert any('Technical terms' in e.label for e in app.sidebar.expander)
+    assert any(e.label == 'Quick terminology' for e in app.sidebar.expander)
 
 
 def test_research_workspace_pages():
     app = AppTest.from_file(APP).run(timeout=30)
-    for page in ('MRNet Dataset', 'Model Experiments'):
-        app.sidebar.radio[0].set_value(page).run(timeout=30)
+    for page in ('dataset', 'generation', 'reconstruction', 'experiments', 'about'):
+        app.switch_page(f'pages/{page}.py').run(timeout=30)
         assert not app.exception
 
 
@@ -28,13 +39,11 @@ def test_dashboard_workflow(config, nifti, tmp_path):
     path = tmp_path / 'config.yaml'
     path.write_text(yaml.safe_dump(config))
     app = AppTest.from_file(APP).run(timeout=30)
-    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=30)
-    app.sidebar.text_input[0].set_value(str(path)).run()
-    app.sidebar.button[0].click().run(timeout=30)
+    workbench(app); configure(app, path)
     assert not app.exception
     assert app.metric[0].value == '1'
     for page in ['MRI Viewer', 'Preprocessing', 'Intensity Analysis', 'Dataset Quality', 'Export']:
-        app.sidebar.radio[0].set_value(page).run(timeout=30)
+        app.selectbox(key='data_tool').select(page).run(timeout=30)
         assert not app.exception, page
         if page == 'MRI Viewer':
             app.checkbox[0].check().run(timeout=30)
@@ -64,10 +73,8 @@ def test_valid_config_values_outside_default_preview_bounds(config, nifti, tmp_p
     path = tmp_path/'config.yaml'
     path.write_text(yaml.safe_dump(config))
     app = AppTest.from_file(APP).run(timeout=30)
-    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=30)
-    app.sidebar.text_input[0].set_value(str(path)).run(timeout=30)
-    app.sidebar.button[0].click().run(timeout=30)
-    app.sidebar.radio[0].set_value('Preprocessing').run(timeout=30)
+    workbench(app); configure(app, path)
+    app.selectbox(key='data_tool').select('Preprocessing').run(timeout=30)
     assert not app.exception
     controls = {n.label: n.value for n in app.number_input}
     if 'target_shape' in settings:
@@ -85,16 +92,14 @@ def test_failed_reindex_clears_previous_dataset_preview_and_export(config, nifti
     path = tmp_path/'config.yaml'
     path.write_text(yaml.safe_dump(config))
     app = AppTest.from_file(APP).run(timeout=30)
-    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=30)
-    app.sidebar.text_input[0].set_value(str(path)).run(timeout=30)
-    app.sidebar.button[0].click().run(timeout=30)
-    app.sidebar.radio[0].set_value('Preprocessing').run(timeout=30)
+    workbench(app); configure(app, path)
+    app.selectbox(key='data_tool').select('Preprocessing').run(timeout=30)
     next(b for b in app.button if b.label == 'Run preprocessing preview').click().run(timeout=30)
-    app.sidebar.radio[0].set_value('Export').run(timeout=30)
+    app.selectbox(key='data_tool').select('Export').run(timeout=30)
     next(b for b in app.button if b.label == 'Process & export dataset').click().run(timeout=30)
     assert not app.exception and 'preview' in app.session_state and 'run' in app.session_state
     shutil.rmtree(config['dataset']['raw_dir'])
-    app.sidebar.button[0].click().run(timeout=30)
+    next(b for b in app.button if b.label == 'Index & validate dataset').click().run(timeout=30)
     assert not app.exception and app.error
     for key in ('records', 'errors', 'report', 'preview', 'run'):
         assert key not in app.session_state

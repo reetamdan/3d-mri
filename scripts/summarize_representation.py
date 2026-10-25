@@ -39,7 +39,9 @@ def summarize(studies, output):
             if sha256_file(path) != record['checkpoint_sha256']:
                 raise ValueError('Measured checkpoint hash changed')
             budgets.add((actual, config['batch_size']*config['gradient_accumulation'], tuple(config['shape'])))
-            records.append(dict(record, source_study=str(root), actual_updates=actual))
+            public = {key: value for key, value in record.items()
+                      if key not in ('quantitative_gate', 'quantitative_gate_pass', 'visual_review')}
+            records.append(dict(public, source_study=str(root), actual_updates=actual))
         if study['status'] != 'completed':
             pending.append(str(root))
     if len(fingerprints) != 1 or len(budgets) != 1:
@@ -51,33 +53,32 @@ def summarize(studies, output):
         grouped[arm] = dict(seeds=[r['seed'] for r in rows], spatial_compression=rows[0]['compression'],
             metrics={key: dict(mean=statistics.mean(r['metrics'][key] for r in rows),
                                seed_sd=statistics.stdev(r['metrics'][key] for r in rows) if len(rows) > 1 else None) for key in keys},
-            parameters=rows[0]['parameters'], train_peak_mib=max(r['training_peak_cuda_mib'] or 0 for r in rows),
-            gates_passed=sum(r['quantitative_gate_pass'] for r in rows), anatomy_metric=None)
+            parameters=rows[0]['parameters'], train_peak_mib=max(r['training_peak_cuda_mib'] or 0 for r in rows))
     def number(item, digits):
         mean = f'{item["mean"]:.{digits}f}'
         return mean+f' ± {item["seed_sd"]:.{digits}f}' if item['seed_sd'] is not None else mean+' (one seed)'
     lines = ['# Measured autoencoder comparisons', '',
-        'Same frozen 96/24 model-selection cohort; no independent patient-test claim.',
-        'Means ± sample SD describe actual training seeds; single-seed screens have no invented seed variance.', '',
-        '| Arm | Seeds | Spatial compression | PSNR dB | SSIM | MS-SSIM | Gradient ratio | HF ratio | Peak train MiB | Gate passes |',
-        '|---|---|---|---:|---:|---:|---:|---:|---:|---|']
+        'Recorded measurements on the frozen 96/24 training/validation cohort.',
+        'Means ± sample SD describe training seeds; single-seed configurations are marked explicitly.', '',
+        '| Arm | Seeds | Spatial compression | PSNR dB | SSIM | MS-SSIM | Gradient ratio | HF ratio | Peak train MiB |',
+        '|---|---|---|---:|---:|---:|---:|---:|---:|']
     for arm, row in grouped.items():
         m = row['metrics']
         lines.append(f'| {arm} | '+','.join(map(str, row['seeds']))+' | '+'×'.join(map(str, row['spatial_compression']))
             +f' | {number(m["psnr"], 3)} | {number(m["ssim"], 4)} | {m["ms_ssim"]["mean"]:.4f}'
             +f' | {m["gradient_energy_ratio"]["mean"]:.3f} | {m["high_frequency_energy_ratio"]["mean"]:.3f}'
-            +f' | {row["train_peak_mib"]:.1f} | {row["gates_passed"]}/{len(row["seeds"])} |')
-    lines += ['', 'Anatomy/lesion proxy values are unavailable: no aligned masks/validated knee model were supplied.',
-              'Gradient/frequency metrics use the common resized array grid; they are not anatomical annotations.',
-              'Continuous latent scalar counts and discrete-code bitrates differ; spatial factors are not codec compression rates.', '',
-              '## Every completed run', '', '| Arm | Seed | PSNR | SSIM | Updates | Effective batch | Decision |',
-              '|---|---:|---:|---:|---:|---:|---|']
+            +f' | {row["train_peak_mib"]:.1f} |')
+    lines += ['', 'Gradient and frequency measurements use the common resized array grid.',
+              'Continuous latent scalar counts and discrete-code bitrates describe different representations.', '',
+              '## Every completed run', '', '| Arm | Seed | PSNR | SSIM | Updates | Effective batch |',
+              '|---|---:|---:|---:|---:|---:|']
     batch = next(iter(budgets))[1]
     for row in records:
         lines.append(f'| {row["arm"]} | {row["seed"]} | {row["metrics"]["psnr"]:.5f} | {row["metrics"]["ssim"]:.5f}'
-                     +f' | {row["actual_updates"]} | {batch} | '+('quantitative pass; visual review required' if row['quantitative_gate_pass'] else 'detail gate failed')+' |')
+                     +f' | {row["actual_updates"]} | {batch} |')
     if pending:
         lines += ['', 'Incomplete/pending studies excluded from completed results: '+', '.join(pending)]
+    lines += ['', 'Research project only. Not for real medical use.']
     path = Path(output); path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text('\n'.join(lines)+'\n', encoding='utf-8')
     write_json(path.with_suffix('.json'), dict(groups=grouped, records=records, dataset_fingerprint=next(iter(fingerprints)),

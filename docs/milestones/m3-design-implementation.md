@@ -91,3 +91,5 @@ Tests use small numerical fixtures; separate integration checks use real MRI.
 6. Open the generated `evidence.md` for measured metrics and fixed-slice images.
 
 Use `docs/milestones/m4-demo.md` for the exact commands and complete demo sequence.
+
+Research project only. Not for real medical use.

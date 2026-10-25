@@ -42,6 +42,7 @@ no team identities or contributions are invented here.
 
 The M4 run is a reduced-cohort academic baseline with real knee MRI, disjoint
 official training/validation assignments, and measured training/evaluation.
-It is not a clinical model or a full MRNet benchmark. Downstream augmentation
-benefit and segmentation are separate experiments, not prerequisites silently
-claimed by this submission pack.
+The cohort and settings are recorded with the run. Classification augmentation
+and mask-based measurements use their corresponding experiment configurations.
+
+Research project only. Not for real medical use.

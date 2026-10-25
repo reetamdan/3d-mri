@@ -38,3 +38,5 @@ pickled objects. Artifact paths and content hashes are checked at pipeline bound
 Use [GitHub's private vulnerability reporting form](https://github.com/reetamdan/3d-mri/security/advisories/new)
 for security issues. Include the affected version, reproduction steps, and impact.
 Do not include patient data, live credentials, or private datasets in a report.
+
+Research project only. Not for real medical use.

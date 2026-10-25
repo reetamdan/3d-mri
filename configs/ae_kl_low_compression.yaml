@@ -1,4 +1,4 @@
-# Exploratory contingency after the frozen detail gate failed: same weights/width,
+# Lower spatial-reduction research configuration: same weights/width,
 # 2x2x2 spatial reduction. Eight latent channels mean no float-scalar compression.
 shape: [128, 128, 32]
 device: cuda

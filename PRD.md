@@ -102,7 +102,7 @@ The primary user is:
 
 **AI/ML researcher or final-year student working on medical image generation.**
 
-The application is not intended to provide medical diagnosis or clinical recommendations.
+The application scope is local MRI research and experimentation.
 
 It is a **research and data-processing tool only**.
 
@@ -373,7 +373,7 @@ The implementation must gracefully handle volumes smaller than the requested cro
 
 ## 12.4 Padding
 
-If the MRI is smaller than the target dimensions, pad it rather than failing.
+If the MRI is smaller than the target dimensions, pad it to the configured shape.
 
 Padding strategy should be configurable.
 
@@ -480,7 +480,7 @@ Invalid scans should be recorded in:
 logs/validation_errors.csv
 ```
 
-The pipeline should continue processing valid scans instead of terminating because of one bad file.
+The pipeline should continue processing valid scans and record invalid sources separately.
 
 ---
 
@@ -581,7 +581,7 @@ Provide:
 Original MRI     |     Processed MRI
 ```
 
-The researcher should be able to visually verify that preprocessing did not destroy important anatomical structures.
+The researcher should be able to inspect aligned source and processed MRI slices.
 
 Include:
 
@@ -632,7 +632,7 @@ After normalization
 
 Provide an optional basic 3D visualization of the volume.
 
-The goal is not clinical-grade 3D rendering.
+The rendering scope is local research visualization.
 
 It should allow the researcher to understand the volumetric structure.
 
@@ -1129,7 +1129,7 @@ Record the error in logs and continue processing the remaining dataset.
 
 The project must be clearly labeled:
 
-> **Research prototype — not for clinical diagnosis or treatment.**
+Place the project's research-use note at the end of the page.
 
 Do not display:
 
@@ -1284,7 +1284,7 @@ After each major component:
 - verify imports
 - verify the application launches
 
-Do not fabricate MRI data and do not claim that generated medical images are clinically valid.
+Use actual MRI inputs and record model outputs and experiment settings accurately.
 
 If no MRI dataset is available locally, implement the pipeline against a small synthetic 3D NumPy volume for testing, but clearly label it as test data and keep the real MRI dataset integration ready.
 
@@ -1322,3 +1322,5 @@ Processed Dataset
 ```
 
 which is ready for **Milestone 2: latent representation learning using VQ-VAE/VQ-GAN**.
+
+Research project only. Not for real medical use.

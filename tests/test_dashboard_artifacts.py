@@ -77,7 +77,7 @@ def test_persistent_history_slice_state_run_switching_and_corruption(tmp_path):
         path.write_bytes(b'corrupted test fixture')
     restarted.run()
     assert not restarted.exception
-    assert any('failed integrity' in warning.value for warning in restarted.warning)
+    assert any('could not be verified' in warning.value for warning in restarted.warning)
 
 
 def test_display_hash_cache_invalidates_and_reverify_reads_content(labeled_tensors, monkeypatch):

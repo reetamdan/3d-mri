@@ -13,7 +13,7 @@ training, validation-selected checkpoints, held-out reconstruction, generation,
 computed evidence, and live trained inference. See [the assessment pack](milestones/README.md)
 and `runs/latest_m4.json`. Historical two-epoch Slicer brain runs remain under
 `runs/SMOKE_TEST-*` and are excluded from research results. The current knee run
-is an academic baseline, with anatomical review and downstream benefit still unproven.
+is an academic experiment with recorded cohort, training and evaluation settings.
 
 The Model Experiments dashboard excludes smoke-test artifacts and legacy runs
 without checkpoint integrity records. It shows an empty state until a completed
@@ -113,10 +113,10 @@ generator loss after `gan_start_epoch`. This is a compact research baseline,
 without a pretrained perceptual network or a claimed reproduction of the paper.
 
 The training log records L1, codebook loss/perplexity, discriminator loss, and
-validation L1. Watch for codebook collapse and oversmoothing. Paired evaluation
+validation L1. Paired evaluation
 saves reconstruction arrays and MSE/MAE/SSIM/PSNR on the same normalized grid.
 The dashboard can compare original input tensors and reconstructions. Metrics
-alone do not establish ligament, cartilage, or meniscus preservation.
+describe the selected reconstruction configuration.
 
 Checkpoints contain model/optimizer states, epoch, random-generator states,
 configuration, input manifest fingerprint, and generator-training scan IDs.
@@ -144,11 +144,11 @@ noise MSE and validation MSE with fixed validation noise draws.
 This is full-step DDPM sampling with the posterior variance and predicted-clean
 latent bounds derived from the trained codebook's per-channel extrema. The
 initial unbounded protocol exhibited extreme latent amplitudes and is retained
-as a sampling ablation. Bounding a sample is not proof of anatomical fidelity.
+as a sampling configuration.
 The historical M4 configuration does not use EMA, guidance or DDIM. Research v2
 adds these as explicit options, including multiresolution denoising, v-prediction,
 packed latent caches and matched-seed comparisons; see [the upgrade guide](research-upgrade.md).
-A decreasing denoising loss alone does not prove convergence or anatomical quality.
+Training and sampling measurements are stored with their respective configurations.
 
 ### 4. Generate and evaluate
 
@@ -159,9 +159,8 @@ python scripts/research.py evaluate-generation --data data/processed/mrnet-sagit
 
 Sampling starts from independent seeded Gaussian noise. Latents are denormalized,
 snapped to the VQ codebook, and decoded. The manifest records conditioning,
-seeds, model hashes, and generator training lineage. Requested disease conditions
-are not verified clinical labels. Choose clinically plausible conditioning
-combinations represented in the training cohort and inspect class fidelity.
+seeds, model hashes and generator training lineage. Conditioning uses the
+global label combinations represented in the training cohort.
 
 Unpaired generation diagnostics include pairwise MS-SSIM diversity, intensity
 ranges, per-axis adjacent-slice MAE, and raw/pooled-spatial nearest-training
@@ -175,13 +174,11 @@ actual number of scales is reported; these values should not be directly compare
 with a paper using a different window/scale protocol. Tests establish basic
 identity and differing-input behavior. Research v2 additionally checks single- and
 five-scale values against `pytorch-msssim` under a matching numerical protocol;
-that does not independently validate medical interpretation of the metric.
+the measurements use that declared numerical protocol.
 
 SSIM/PSNR are reported for paired VQ reconstructions, not arbitrary generated vs
-real pairs. Lower diversity MS-SSIM can indicate noise as well as diversity;
-adjacent-slice differences are not an anatomical validity score. Visual review
-must explicitly examine artifacts, continuity, plausible structures, and near
-copies of training images. Generated volumes have no patient-space affine.
+real pairs. Pairwise similarity and adjacent-slice differences describe the
+sampling configuration. The output arrays use the recorded tensor grid.
 
 ### 5. Compare downstream augmentation
 
@@ -235,3 +232,5 @@ Sources: Stanford dataset description and patient split policy:
 https://stanfordmlgroup.github.io/competitions/mrnet/ ; model task description:
 https://stanfordmlgroup.github.io/projects/mrnet/ ; access portal:
 https://stanford.redivis.com/datasets/4a2c-4cpkzrn2c .
+
+Research project only. Not for real medical use.

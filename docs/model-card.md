@@ -1,60 +1,43 @@
-# Research v2 model card
+# Model configuration card
 
-## Intended use
+## Project scope
 
-Local research into reproducible knee-MRI compression and latent generative
-modelling. The models support controlled experiments, visualization and teaching.
-They are not diagnostic models, certified anatomical simulators, or a source of
-expert-verified disease examples.
+Local research into 3D knee MRI representations, reconstruction and latent
+sampling. The website exposes the corresponding image tools and recorded settings.
 
 ## Data
 
-The controlled study uses a seeded joint-label-stratified subset of public
-MRNet-mirror data: 256 official-training and 60 official-validation exams,
-sagittal series only, resized to 128×128×32 and min-max normalized to [-1,1].
-The official split is retained. The arrays do not provide reliable patient IDs,
-patient-space affines or complete scanner/site metadata. Prevalence and sequence
-variation can differ between cohorts. The mirror's license metadata is unspecified;
-the original dataset's terms govern usage. Raw data are not redistributed here.
+The representation study uses 96 official-training and 24 official-validation
+MRNet sagittal exams, resized to 128×128×32 and min-max normalized to [-1,1].
+The historical 256/60 comparison is a separate recorded experiment in
+`results/research-v2.md`. Patient linkage, physical affines and complete scanner
+metadata are not supplied by these arrays. Dataset terms are separate from the
+software; data and weights are local artifacts.
 
-## Architectures and objectives
+## Models
 
-The control retains the compact two-downsample VQ-VAE and one-down/up latent
-U-Net. The upgrade increases VQ width/codebook capacity, optionally updates the
-codebook with EMA and dead-code resets, and uses a multiresolution conditioned
-3D U-Net with bottleneck attention. Denoising supports epsilon/v prediction,
-EMA inference weights, label dropout and classifier-free guidance. DDPM and
-DDIM use explicit, recorded inference settings. Predicted-clean latent clipping
-uses trained codebook bounds and is recorded in diagnostics.
+- Native VQ: compact two-downsample encoder, eight latent channels, 128 codes,
+  L1 plus VQ regularization, transposed-convolution decoder.
+- VQ capacity configuration: 256 codes with the matched training budget.
+- MONAI KL: channels 8/16/32, eight latent channels, isotropic 4×4×4 or
+  anisotropic 4×4×2 sampling, sampled training and posterior-mean reconstruction.
+- Objective configurations: L1, adaptive MS-SSIM, three-axis gradients, explicit
+  frozen medical features and the corresponding latent regularizer.
+- Diffusion: time/label-conditioned 3D U-Net, cosine scheduler, epsilon/v targets,
+  optional EMA, label dropout, CFG, Min-SNR and condition-token attention.
+- Sampling: recorded DDPM/DDIM settings and training-fitted latent scaling/bounds.
 
-## Evaluation
+## Measurements
 
-Per-exam MSE, MAE, PSNR and SSIM measure paired normalized reconstructions.
-Foreground diagnostics use an intensity mask, not a segmentation annotation.
-Seed-level variability and exam/subject bootstrap intervals are reported with
-their actual unit. MRNet's absent patient linkage limits exam-level uncertainty.
-Nearest-neighbour checks search all generator training references. Diversity,
-texture descriptors and spatial pooled features are not anatomical-quality scores.
+Reconstruction uses per-exam MSE, MAE, PSNR, SSIM, adaptive MS-SSIM and unit-grid
+edge/frequency descriptors. Sampling studies record seeds, condition inputs,
+latent values, sample statistics and training-reference similarities.
+`results/ae_bakeoff_measured.md` and `research_v2_report.md` contain the recorded values.
 
-The controlled experiment uses internal validation for selection/reporting.
-It is not independent test performance. New-cohort overlap audits and frozen
-protocol support are available, but cannot create trustworthy new patients or
-prove that a dataset was never inspected.
+## Reproducibility
 
-## Known limitations
+Configurations are in `configs/`. Checkpoints, cohort identities, normalization
+constants, source hashes and selected epochs are stored with local run records.
+The application checks model/data/image relationships before display.
 
-The [three-seed controlled comparison](results/research-v2.md) reports measured
-internal-validation improvements over the matched control and the same-cohort
-interpolation reference. That result is separate from an independent anatomical
-or clinical validation study.
-
-- Generated structures can remain blurry, inconsistent or anatomically implausible.
-- Requested exam-label conditions are not verified pathology in generated images.
-- No expert review, segmentation evaluation or downstream utility is inferred
-  from software tests or pixel similarity.
-- Small cohorts and few training seeds limit precision and generalization.
-- Additional losses, attention or larger models do not guarantee clinical fidelity.
-
-See [the upgrade guide](research-upgrade.md) for implemented safeguards, protocols,
-operator commands and remaining evidence requirements. Full datasets, weights and
-sample manifests remain local; the repository publishes aggregate measured results.
+Research project only. Not for real medical use.

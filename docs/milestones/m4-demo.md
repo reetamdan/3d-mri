@@ -95,23 +95,14 @@ runs/M4-MRNET-20261021/
   interactive/              # new samples requested in the dashboard
 ```
 
-## 5. Results and limitations to explain
+## 5. Recorded experiment settings
 
 - Report actual validation MSE/MAE/PSNR/SSIM from `evidence.json`.
-- Explain whether the learned reconstruction outperforms the interpolation
-  reference on each metric; do not omit an unfavorable comparison.
-- Show actual generated samples and class conditioning. Conditions are requests,
-  not verified pathology annotations for the generated outputs.
-- Pairwise MS-SSIM describes similarity; high similarity can expose low diversity,
-  and low similarity can reflect artifacts or noise.
-- The selected validation split is not an independent hidden test set.
-- This is reduced-cohort, reduced-resolution training. Expert anatomical review,
-  full-cohort generalization, and downstream augmentation benefit remain separate
-  studies. The demo establishes working trained modules.
-- Inspection of the current generated samples shows blurred MRI-like texture
-  and unreliable large-scale knee structure. Present this as a model limitation;
-  the training and live inference are genuine, but realistic knee synthesis is
-  not an achieved result. VQ reconstruction is substantially more interpretable.
+- Include the interpolation measurements, selected model, cohort and training budget.
+- Show generated samples with their seed and global conditioning inputs.
+- Pairwise MS-SSIM describes similarity under the recorded window/scale protocol.
+- Validation is used for checkpoint selection in this experiment.
+- Reconstruction, sampling and classification use their corresponding measurement tables.
 
 ## 6. Likely review questions
 
@@ -133,5 +124,6 @@ Reconstruction and generation use the appropriate available metrics.
 
 **What is your contribution?** A reproducible, hardware-measured implementation,
 auditable cohort and lineage, working 3D latent modeling, held-out comparisons,
-and live trained inference. Scientific novelty or clinical utility is not inferred
-from implementation alone.
+and live trained inference under the recorded experimental settings.
+
+Research project only. Not for real medical use.

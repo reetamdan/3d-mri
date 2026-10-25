@@ -72,14 +72,15 @@ def test_real_export_reproducibility_and_tensor_roundtrip(tmp_path):
 
 def test_real_dashboard_all_scans_and_controls():
     app = AppTest.from_file(str(ROOT / 'app/streamlit_app.py')).run(timeout=60)
-    app.sidebar.radio[0].set_value('Dataset Overview').run(timeout=60)
-    app.sidebar.text_input[0].set_value(str(ROOT / 'configs/real-scans.yaml')).run(timeout=60)
-    app.sidebar.button[0].click().run(timeout=60)
+    app.switch_page('pages/workbench.py').run(timeout=60)
+    next(t for t in app.text_input if t.label == 'Configuration file').set_value(str(ROOT / 'configs/real-scans.yaml')).run(timeout=60)
+    next(b for b in app.button if b.label == 'Index & validate dataset').click().run(timeout=60)
     assert not app.exception
     assert app.metric[0].value == '3'
-    app.sidebar.radio[0].set_value('MRI Viewer').run(timeout=60)
-    for scan in app.selectbox[0].options:
-        app.selectbox[0].set_value(scan).run(timeout=60)
+    app.selectbox(key='data_tool').select('MRI Viewer').run(timeout=60)
+    scan_widget = next(s for s in app.selectbox if s.label == 'Scan')
+    for scan in scan_widget.options:
+        next(s for s in app.selectbox if s.label == 'Scan').select_index(scan_widget.options.index(scan)).run(timeout=60)
         assert not app.exception
         for slider in app.slider:
             slider.set_value(slider.max)
@@ -87,17 +88,17 @@ def test_real_dashboard_all_scans_and_controls():
         assert not app.exception
     app.checkbox[0].check().run(timeout=60)
     assert not app.exception
-    app.sidebar.radio[0].set_value('Preprocessing').run(timeout=60)
+    app.selectbox(key='data_tool').select('Preprocessing').run(timeout=60)
     next(b for b in app.button if b.label == 'Run preprocessing preview').click().run(timeout=60)
     assert not app.exception
     assert app.session_state['preview'][1].shape == (128, 128, 128)
     for plane in PLANES:
         next(s for s in app.selectbox if s.label == 'Comparison plane').set_value(plane).run(timeout=60)
         assert not app.exception
-    app.sidebar.radio[0].set_value('Intensity Analysis').run(timeout=60)
+    app.selectbox(key='data_tool').select('Intensity Analysis').run(timeout=60)
     next(b for b in app.button if b.label == 'Run preprocessing preview').click().run(timeout=60)
     next(b for b in app.button if b.label == 'Calculate interpolation reconstruction baseline').click().run(timeout=60)
     assert not app.exception
-    app.sidebar.radio[0].set_value('Dataset Quality').run(timeout=60)
+    app.selectbox(key='data_tool').select('Dataset Quality').run(timeout=60)
     assert not app.exception
     assert app.metric[2].value == '0'

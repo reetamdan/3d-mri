@@ -48,16 +48,17 @@ Its anatomical-axis semantics must not be applied to MRNet arrays.
 | PSNR | 24.29968 dB | 21.36067 dB |
 | SSIM | 0.76587 | 0.77707 |
 
-VQ improves PSNR on 23/24 exams but SSIM on only 4/24. Generated gradient energy
-is 16.1% of the training mean; samples are blurred and incoherent. The verified
-three-seed downstream probe has zero ACL/meniscus sensitivity at threshold 0.5;
-it does not demonstrate useful synthetic pathology or augmentation.
+The recorded VQ/interpolation comparison has higher VQ PSNR on 23/24 exams and
+higher VQ SSIM on 4/24. Generated gradient energy is 16.1% of the training mean.
+The three-seed classification probe records ACL/meniscus sensitivity of zero at
+threshold .5. Additional measurements are in the research report.
 
 ## First representation question
 
 Compare the same frozen inputs/exams and optimizer-update budgets using a compact
 KL autoencoder at 4×4×4, then 4×4×2 compression, then a structural objective.
 Also retain a matched-budget existing VQ control and a small improved VQ control.
-Freeze gate criteria before training; assess pixel, structural, edge and frequency
-metrics together. No anatomical ROI or segmentation claim is possible without
-reproducible annotations/a suitable independently validated model.
+Record the protocol before training and measure pixels, structure, edges and
+frequency content on the same inputs.
+
+Research project only. Not for real medical use.

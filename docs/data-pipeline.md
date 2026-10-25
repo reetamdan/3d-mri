@@ -102,7 +102,7 @@ processing_log.csv
 `metadata.csv` records source/tensor checksums, pseudonymous IDs, split assignments,
 and original/processed geometry. `experiment.json` records resolved configuration,
 seed, dependency versions, and assignments. Set `export_format: pt` for PyTorch
-files instead of NumPy. A bad scan is logged while valid scans continue.
+files instead of NumPy. An invalid source is logged while valid scans continue.
 
 Consume completed exports with final metadata/report files. Interrupted processes
 can leave partial run directories. Runtime metadata can contain local paths and
@@ -121,9 +121,11 @@ metrics across different intensity scales.
 
 Generation uses a separate adaptive-scale 3D MS-SSIM protocol with its window and
 scale count recorded. The optional `pytorch-msssim` wrapper uses its upstream
-five-scale constraints. Neither metric establishes anatomical validity.
+five-scale constraints. The selected window and scale protocol accompanies each measurement.
 
 The NIfTI viewer displays canonical slices with physical aspect ratios. Optional
 3D rendering sends at most 48³ sampled values to the local browser. Source volumes
 are processed one at a time, but previews can hold multiple arrays; `max_voxels`
 bounds individual volumes rather than total process memory.
+
+Research project only. Not for real medical use.

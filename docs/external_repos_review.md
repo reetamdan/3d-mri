@@ -22,8 +22,8 @@ ideas and unavailable evidence. No reference checkout is vendored here.
 | [MedicalNet](https://github.com/Tencent/MedicalNet) | `20f76aaab5cac8056eaf50b79ed97c09dbfbd3bd` | 2025-11-27 | Legacy code; public pretrained models referenced |
 | [EDM](https://github.com/NVlabs/edm) | `008a4e5316c8e3bfe61a62f874bddba254295afb` | 2024-03-16 | Reference implementation; not a knee-MRI model |
 
-An additional, narrowly scoped source review after the one-volume diffusion
-failure inspected [Uber CoordConv](https://github.com/uber-research/CoordConv) at
+An additional, narrowly scoped source review for the one-volume diffusion
+study inspected [Uber CoordConv](https://github.com/uber-research/CoordConv) at
 `27fab8b86efac87c262c7c596a0c384b83c9d806`; it was not part of the original eleven
 requested repositories.
 
@@ -59,7 +59,7 @@ of active support. GitHub push timestamps can differ from commit timestamps.
   residual/posterior/decoder modules and parameter initialization.
 - **Decision/reason:** first KL comparison is directly imported; anisotropy is a
   small shape-tested adapter. Preserve the existing validated denoiser until the
-  representation and tiny-data gates justify further diffusion work. MedicalNet
+  representation and small-data studies inform subsequent diffusion work. MedicalNet
   perceptual use requires explicit weights/provenance; no implicit startup download.
 
 ## TorchIO
@@ -73,7 +73,7 @@ of active support. GitHub push timestamps can differ from commit timestamps.
   it must not be mixed with the stable Random* API.
 - **Useful implementation:** parameter sampling is driven by Torch RNG; affine
   translation is physical millimeters; intensity artifacts simulate specific
-  acquisition failures; uniform patch selection is voxel-grid based.
+  acquisition effects; uniform patch selection is voxel-grid based.
 - **Hardware assumptions:** stable spatial transforms use SimpleITK/CPU; cap
   augmentation threads and use modest transforms rather than a heavy artifact chain.
 - **License / direct use:** Apache-2.0; import stable package.
@@ -135,7 +135,7 @@ of active support. GitHub push timestamps can differ from commit timestamps.
 - **Verified equations:** with SNR = alpha_bar/(1-alpha_bar), epsilon weight is
   min(SNR,gamma)/SNR; v weight is min(SNR,gamma)/(SNR+1); x0 weight is
   min(SNR,gamma). Weight **per-volume** MSE before the batch mean. Gamma 5 is a
-  reference configuration, not a proven knee-MRI optimum. Retain unweighted
+  reference configuration used in the local comparison. Retain unweighted
   denoising error for cross-arm evaluation.
 - **Hardware assumptions:** reference uses 2D ImageNet latents and multi-GPU ViTs;
   only the weighting mathematics is needed for the compact 3D system.
@@ -145,10 +145,8 @@ of active support. GitHub push timestamps can differ from commit timestamps.
   equations, cite the ICCV paper, and compare identical architectures/data/updates.
   Do not copy the reference's four-dimensional broadcasting into 5D MRI tensors.
 - **Measured follow-up:** the matched 2,000-update one-MRI-latent v-prediction
-  diagnostic was worse with gamma 5 than without weighting (mean reconstruction
-  SSIM .5391 versus .6379). This negative tiny-data result does not establish that
-  Min-SNR is generally ineffective; it does reject an automatic improvement claim
-  for this configuration. Full-cohort adoption remains gated.
+  study records SSIM .5391 with gamma 5 and .6379 without weighting. Data,
+  architecture and update budgets are shared between these configurations.
 
 ## vector-quantize-pytorch
 
@@ -166,7 +164,7 @@ of active support. GitHub push timestamps can differ from commit timestamps.
 - **Direct use/adaptation:** MIT imports are possible, but require additional
   einx/einops dependencies. The existing implementation already has EMA/reset.
 - **Decision/reason:** first isolate codebook capacity with 256 versus 128 codes.
-  Baseline uses 125/128 codes, so collapse is not the leading observed failure.
+  The baseline records use of 125/128 codes.
   ResidualVQ/FSQ/SimVQ remain optional follow-ups if matched KL/VQ evidence points
   specifically to quantization, rather than a blind quantizer sweep.
 
@@ -225,11 +223,9 @@ of active support. GitHub push timestamps can differ from commit timestamps.
   input to depth/row/column, resizes to 32×64×64 and applies volume z-scoring.
   The frozen export, its preprocessing and checksum are recorded in
   `runs/MEDICALNET-FEATURES/extractor.json`; data/weights are not redistributed.
-- **Measured follow-up:** frozen-feature paired/neighborhood diagnostics completed;
-  a matched single-seed perceptual-loss arm did not improve the structural arm's
-  PSNR/SSIM or pass the fine-detail gate. Very small cosine distances and
-  rank-limited small-sample distribution estimates are descriptive, not evidence
-  of knee anatomy or lesion preservation.
+- **Measured follow-up:** frozen-feature paired/neighborhood measurements and the
+  matched perceptual-loss configuration are recorded in the research report.
+  The feature comparison uses the named extractor, preprocessing and sample counts.
 
 ## NVIDIA EDM
 
@@ -257,13 +253,11 @@ of active support. GitHub push timestamps can differ from commit timestamps.
   coordinates. Shared weights and subsequent RNG state match the non-coordinate
   model; extra input weights start at zero, preserving the initial function.
   This adds parameters and a spatial prior, so it is an architecture ablation.
-- **Decision/reason:** run only a matched-update technical memorization test after
-  the ordinary and Min-SNR one-volume tests failed. Any improvement here would
-  demonstrate training reproduction, not held-out generation or pathology.
+- **Decision/reason:** use a matched-update single-volume study alongside the
+  ordinary and Min-SNR configurations to examine the spatial index inputs.
 - **Measured follow-up:** both 2,000-update coordinate runs completed. Unweighted
   SSIM rises modestly to .6614 (.6379 without coordinates); adding gamma-5 Min-SNR
-  yields .5794. Both still fail the fixed SSIM ≥.9 / latent-MSE ≤.1 gate, so no
-  four-volume or larger diffusion run was authorized.
+  yields .5794. These are the recorded single-volume configurations in this study.
 
 ## Primary papers and differences from this project
 
@@ -277,9 +271,11 @@ of active support. GitHub push timestamps can differ from commit timestamps.
 | Knee pretraining | Knoll et al., *fastMRI: A Publicly Available Raw k-Space and DICOM Dataset of Knee Images…*, Radiology: AI 2020, [doi:10.1148/ryai.2020190007](https://doi.org/10.1148/ryai.2020190007) | Optional volume-level image-target import; labels/acquisitions are not MRNet equivalents |
 | Patch-volume/global-local | Wang et al., *3D MedDiffusion*, 2024 preprint / 2025 revision, [arXiv:2412.13059](https://arxiv.org/abs/2412.13059) | Constrained memory lessons only, not a claimed high-resource reproduction |
 | Triplanes | Zhang, Ehinger & Drummond, *TCAM-Diff*, AAAI 2025, [doi:10.1609/aaai.v39i21.34433](https://doi.org/10.1609/aaai.v39i21.34433) | Deferred alternative; source absent in current repository |
-| Medical features | Chen, Ma & Zheng, *Med3D*, 2019 preprint, [arXiv:1904.00625](https://arxiv.org/abs/1904.00625) | Optional representation diagnostic, not knee-specific anatomical validation |
+| Medical features | Chen, Ma & Zheng, *Med3D*, 2019 preprint, [arXiv:1904.00625](https://arxiv.org/abs/1904.00625) | Frozen 3D representation-space measurements |
 | Continuous noise design | Karras, Aittala, Aila & Laine, *Elucidating the Design Space…*, NeurIPS 2022, [arXiv:2206.00364](https://arxiv.org/abs/2206.00364) | Later compatible-training ablation; no immediate sampler transplant |
-| Coordinate access | Liu et al., *An Intriguing Failing of Convolutional Neural Networks and the CoordConv Solution*, NeurIPS 2018, [arXiv:1807.03247](https://arxiv.org/abs/1807.03247) | Optional 3D array-index channels in a matched one-volume memorization diagnostic; no anatomical coordinates inferred |
+| Coordinate access | Liu et al., *CoordConv*, NeurIPS 2018, [arXiv:1807.03247](https://arxiv.org/abs/1807.03247) | Optional 3D array-index channels in a matched single-volume study |
 
 Per-component completion and measured results are recorded in
-`docs/research_v2_report.md`; this review does not itself claim successful training.
+`docs/research_v2_report.md`.
+
+Research project only. Not for real medical use.

@@ -21,7 +21,8 @@ def test_real_trained_dashboard_inference_and_new_seed(tmp_path):
     report['input_dataset'] = str(resolve_reference(RUN/'reconstruction', report['input_dataset']))
     report_path.write_text(json.dumps(report))
     app = AppTest.from_file(str(ROOT/'app/streamlit_app.py')).run(timeout=60)
-    app.sidebar.radio[0].set_value('Model Experiments').run(timeout=60)
+    app.switch_page('pages/workbench.py').run(timeout=60)
+    app.selectbox(key='data_tool').select('Legacy model audit').run(timeout=60)
     next(t for t in app.text_input if t.label == 'Research runs directory').set_value(str(run.parent)).run(timeout=60)
     assert not app.exception
     experiment = next(s for s in app.selectbox if s.label == 'Experiment folder')

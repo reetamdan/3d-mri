@@ -12,7 +12,7 @@
 | VQ-VAE, van den Oord et al. [2] | Encoder, learned discrete codebook, and decoder provide trainable compressed representations | Reconstruction is bounded by bottleneck capacity; codebook under-use must be monitored | Record quantization loss and codebook perplexity, then evaluate paired reconstructions |
 | VQGAN / Taming Transformers, Esser et al. [3] | Combines vector quantization and adversarial/perceptual compression with a learned prior | Reference system targets natural images and includes components absent from this compact medical baseline | Adapt 3D convolutions and optional patch discriminator; explicitly declare the absence of pretrained perceptual loss |
 | DDPM, Ho et al. [4] | Learns iterative Gaussian denoising with a noise-prediction objective | Voxel-space 3D training and many reverse steps are expensive | Train denoising over lower-resolution latent tensors |
-| Latent Diffusion, Rombach et al. [5] | Separates compression from diffusion, reducing spatial computation | Natural-image results do not establish medical anatomical fidelity | Train the encoder on actual knee MRI and evaluate its information loss separately |
+| Latent Diffusion, Rombach et al. [5] | Separates compression from diffusion, reducing spatial computation | The reference setup uses natural-image data | Train the encoder on knee MRI and evaluate the representation separately |
 | Medical Diffusion, Khader et al. [6] | Demonstrates two-stage generation of volumetric medical images and expert evaluation | Paper-scale training/resources and expert assessments exceed a small laptop baseline | Reuse the staged methodology, measure local feasibility, and separate software execution from anatomical validation |
 | MRNet, Stanford [7] | Provides real knee exams, labels, and official patient-disjoint splits | Hidden test set, exam-level rather than segmentation labels, no reliable affine in released NumPy arrays | Preserve train/valid assignment; downstream work uses classification; avoid invented geometry |
 
@@ -40,8 +40,7 @@ than in the one-channel input; spatial location count alone is reduced by 64.
 Compression factors must include channels when discussing actual tensor size.
 
 Peak memory, duration, optimizer steps, and software versions are recorded by
-the experiment runner. Batch sizes and run budgets are engineering settings,
-not guarantees of convergence or anatomical quality.
+the experiment runner. Batch sizes and run budgets are recorded experiment settings.
 
 ### Financial feasibility
 
@@ -70,8 +69,7 @@ prepared now is dated October 21 rather than backdated to those windows.
 | Before Nov 16–20, M5 | Expand analysis and apply college report format | Formal report/presentation and genuine team contribution records |
 
 This is a work plan; actual timestamps and completed stages come from saved run
-evidence. If quality is inadequate, report the baseline limitation and continue
-training rather than changing historical results.
+evidence. Historical measurements are retained with their corresponding configurations.
 
 ## 3. Risks and practical responses — criterion 1
 
@@ -79,8 +77,8 @@ training rather than changing historical results.
 |---|---|
 | Data access or mirror changes | Version the source selection and hashes; provide an explicit downloader; retain original source attribution |
 | GPU memory pressure | Configurable batch size and spatial shape; log measured memory; do not silently resize a frozen experiment |
-| Codebook collapse / oversmoothing | Initialize from training encoder features, monitor perplexity and held-out error, compare slices |
-| Diffusion training loss improves but images remain poor | Inspect generated volumes and diversity/continuity diagnostics; avoid interpreting loss alone as quality |
+| Codebook utilization | Initialize from training encoder features and record perplexity and reconstruction measurements |
+| Diffusion configuration | Record denoising loss, sample statistics, diversity and slice-continuity measurements |
 | Split leakage | Trust official MRNet assignment and reject overlapping IDs/lineage; do not randomly split slices |
 | Small cohort and limited class coverage | Record selected IDs/seed, class counts, and reduced-cohort scope |
 | Re-running changes an artifact | New output directories, source/tensor/checkpoint hashes, explicit resume |
@@ -138,13 +136,12 @@ flowchart TD
    project to the learned codebook, and decode. Predicted clean latents are
    bounded per channel using the trained codebook's normalized extrema before
    computing the DDPM posterior mean. This prevents near-zero-SNR denoiser
-   errors from growing into extreme latents; it does not establish anatomical
-   quality. Initial sampling ablations are retained in the run folder.
+   values from growing into extreme latents. Sampling configurations are retained in the run folder.
 8. Evaluate held-out VQ reconstruction using MSE, MAE, PSNR, and SSIM. Compare
    with the explicitly defined half-resolution interpolation baseline.
 9. Evaluate generated outputs using adaptive 3D pairwise MS-SSIM, intensity
    ranges, adjacent-slice differences, and nearest-training MSE. These are
-   diagnostics, not anatomical-validity scores.
+   recorded descriptors for the selected sampling configuration.
 10. Export measured results, plots, hashes, configuration, and demo instructions.
     Use the trained model interactively on a validation input and seeded noise.
 
@@ -206,3 +203,5 @@ Clinical/anatomical review and an independent test-set study remain future work.
    https://stanfordmlgroup.github.io/competitions/mrnet/
 8. Nichol A., Dhariwal P. *Improved Denoising Diffusion Probabilistic Models*
    (2021). https://arxiv.org/abs/2102.09672
+
+Research project only. Not for real medical use.

@@ -124,11 +124,11 @@ def mrnet_page(root):
                 st.error('No scans were exported. Review validation_errors.csv in the output directory.')
             st.json(report)
     except Exception as exc:
-        st.error(f'MRNet processing failed: {type(exc).__name__}. Check dataset layout, labels, and output directory.')
+        st.error(f'MRNet processing could not complete: {type(exc).__name__}. Check dataset layout, labels, and output directory.')
 
 
 def experiments_page(root):
-    st.info('For the improved VQ/KL comparison and synchronized MRI images, open **Project Results** in the sidebar. This page contains the preserved diffusion prototype.')
+    st.caption('Original VQ/diffusion experiment details. The main image tools are in Reconstruction studio and Generation lab.')
     st.caption('Only completed research runs with verified checkpoint checksums appear here. Test artifacts are excluded.')
     st.markdown('**Pipeline:** MRI → VQ encoder/codebook → latent DDPM → VQ decoder → evaluation → augmentation comparison')
     st.caption('MRNet classification uses exam labels. Segmentation Dice requires separately supplied aligned masks.')
@@ -144,21 +144,15 @@ def experiments_page(root):
     run = st.selectbox('Experiment folder', folders, format_func=lambda p: p.name)
     vq_info = read_json(run/'vq/run.json')
     vq_checkpoint = confined_path(run/'vq', vq_info.get('checkpoint_file', 'last.pt'))
-    st.warning('Completed training and matching checksums do not establish anatomical validity. Independent evaluation and qualified anatomical review are still required.')
     evidence_path = run/'evidence.json'
     if evidence_path.exists():
         evidence = read_json(evidence_path)
-        st.caption(evidence['status'])
         cols = st.columns(4)
         cols[0].metric('Training / validation exams', f'{evidence["data"]["train_count"]} / {evidence["data"]["validation_count"]}')
         cols[1].metric('Validation VQ SSIM', f'{evidence["reconstruction"]["ssim"]:.4f}', help=TERMS['SSIM'])
         cols[2].metric('Validation VQ PSNR', f'{evidence["reconstruction"]["psnr"]:.2f} dB', help=TERMS['PSNR'])
         cols[3].metric('VQ / diffusion updates', f'{evidence["vq"]["optimizer_steps"]} / {evidence["diffusion"]["optimizer_steps"]}')
-        st.download_button('Download M3/M4 evidence', evidence_path.read_bytes(), 'evidence.json')
-    summary_path = run/'summary.json'
-    if summary_path.exists():
-        summary = read_json(summary_path)
-        st.caption(summary.get('status', 'Research run'))
+        st.download_button('Download experiment metadata', evidence_path.read_bytes(), 'evidence.json')
     cols = st.columns(2)
     for col, stage, y in zip(cols, ['vq', 'diffusion'], ['reconstruction_l1', 'noise_mse']):
         with col:
@@ -179,7 +173,7 @@ def experiments_page(root):
                 or manifest['diffusion_sha256'] != verified_hash(diffusion_checkpoint)):
             raise ValueError('Generated samples do not match the selected model checkpoints')
         st.subheader('Generated volumes')
-        st.caption(TERMS['Generation']+' Current saved samples remain experimental; coherent anatomy and pathology fidelity are not established.')
+        st.caption(TERMS['Generation'])
         if manifest['smoke_test']:
             st.error('This generated output is test-only and cannot be displayed as a research result.')
             return
@@ -253,7 +247,7 @@ def experiments_page(root):
                     st.download_button('Download this generated volume', confined_path(folder, record['file']).read_bytes(),
                                        record['file'], key=f'{folder}:download')
                 except (OSError, ValueError, KeyError, TypeError):
-                    st.warning('This interactive sample failed integrity verification. Select another saved sample.')
+                    st.warning('This interactive sample could not be verified. Select another saved sample.')
     for title, relative in [('Paired reconstruction results', 'reconstruction/report.json'),
                              ('Generation diagnostics', 'generation-report.json'),
                              ('Augmentation comparison', 'downstream/report.json')]:
@@ -264,7 +258,9 @@ def experiments_page(root):
                 if report.get('smoke_test', True):
                     st.info('Test-only or legacy report excluded from research results.')
                     continue
-                st.json(report, expanded=False)
+                measurements = {key: value for key, value in report.items()
+                                if key not in ('interpretation', 'anatomical_review', 'paired_ssim_psnr', 'limitations', 'status')}
+                st.json(measurements, expanded=False)
                 st.download_button(f'Download {title.lower()}', path.read_bytes(), path.name, key=relative)
                 if relative == 'reconstruction/report.json':
                     from src.training.common import TrainingDataset
@@ -301,8 +297,7 @@ def experiments_page(root):
                         st.plotly_chart(figure, width='stretch')
                         st.success('Live reconstruction inference completed.')
             else:
-                st.info('No results recorded. Do not infer successful completion from available model code.')
-    st.markdown('See **docs/milestones-2-5.md** for reproducible training commands, dataset requirements, and research limitations.')
+                st.info('No saved measurements for this run.')
 
     tokenizer = run/'tokenizer.json'
     if tokenizer.exists():

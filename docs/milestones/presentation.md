@@ -54,8 +54,8 @@ from `evidence.json`. Explain internal validation checkpoint selection.
 ## Slide 9 — M4: held-out reconstruction
 
 Insert `evidence-assets/validation-1.png`. Add the computed learned-VQ versus
-interpolation MSE/MAE/PSNR/SSIM table. Discuss blurring, lost detail, and the
-baseline's different information budget.
+interpolation MSE/MAE/PSNR/SSIM table. Describe the recorded settings and the
+representations' information budgets.
 
 ## Slide 10 — M4: generation and live demo
 
@@ -63,14 +63,16 @@ Insert `evidence-assets/generated.png`. Run **Generate a new volume** with a
 changed seed and show the new artifact manifest. Explain requested conditioning,
 fixed intensity scale, and same-device seeded repeatability.
 
-## Slide 11 — Results, limitations, next research steps
+## Slide 11 — Measurements and additional studies
 
-- Explain generated/real diversity and observed artifacts using actual outputs.
-- Reduced cohort/resolution; official validation is not an independent test set.
-- No expert-confirmed anatomy, pathology fidelity, or downstream benefit claim.
-- Next: larger-cohort training, anatomical review, controlled augmentation study.
+- Describe generated/real diversity using the recorded sample protocol.
+- State the cohort, resolution and model-selection validation settings.
+- Identify which measurements and configurations were included in the study.
+- Additional studies can use larger cohorts, spatial annotations and augmentation comparisons.
 
 ## Slide 12 — Reproducibility and questions
 
 Show the one-command runner, evidence path, checkpoint hashes, and test result.
 Finish with the M1–M4 criterion mapping from this directory's README.
+
+Research project only. Not for real medical use.

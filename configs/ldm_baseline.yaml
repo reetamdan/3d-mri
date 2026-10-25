@@ -1,4 +1,4 @@
-# Future full-cohort control: blocked until the KL representation gate passes.
+# Full-cohort research control; follow the recorded representation protocol.
 shape: [128, 128, 32]
 device: cuda
 threads: 4

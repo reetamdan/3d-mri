@@ -96,8 +96,8 @@ interpolation baseline on the same normalized grid?
 diversity, slice-continuity, and nearest-training diagnostics reveal?
 
 M4 software success requires actual checkpoints, held-out results, recorded
-optimizer steps, reproducible inference, and a live demonstration. A decreasing
-loss or a successful demonstration is not by itself an anatomical-quality claim.
+optimizer steps, reproducible inference and a live demonstration. The recorded
+measurements describe the selected experimental configurations.
 
 ## References
 
@@ -106,3 +106,5 @@ loss or a successful demonstration is not by itself an anatomical-quality claim.
 2. Khader F. et al. *Medical Diffusion: Denoising Diffusion Probabilistic Models
    for 3D Medical Image Generation.* arXiv:2211.03364.
    https://arxiv.org/abs/2211.03364
+
+Research project only. Not for real medical use.
